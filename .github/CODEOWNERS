@@ -1,3 +1,29 @@
-# Every change requires review by the maintainer.
-# Required for the "Require review from Code Owners" branch protection rule.
-* @charlie-fox
+# CODEOWNERS — required for the "Require review from Code Owners" branch
+# protection rule. GitHub reads this file from .github/, the repo root, or
+# docs/; only the first one it finds is used.
+#
+# Every pull request needs an approval from the matching code owner before it
+# can merge into main.
+#
+# Syntax: <pattern> <owner>...   (@user, @org/team, or an e-mail)
+
+# Default owner for everything in the repository.
+*                               @charlie-fox
+
+# ── Release pipeline and packaging ───────────────────────────────────────────
+# Workflows run with repository permissions and the packaging manifests decide
+# what every user installs, so these get an explicit owner even if the default
+# rule is ever loosened.
+/.github/workflows/             @charlie-fox
+/Formula/                       @charlie-fox
+/bucket/                        @charlie-fox
+/scripts/                       @charlie-fox
+
+# ── Application source ───────────────────────────────────────────────────────
+/cmd/                           @charlie-fox
+/frontend/                      @charlie-fox
+
+# ── Security-relevant files ──────────────────────────────────────────────────
+/SECURITY.md                    @charlie-fox
+/LICENSE                        @charlie-fox
+/.gitignore                     @charlie-fox
