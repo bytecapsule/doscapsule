@@ -11,8 +11,8 @@ name: build-release
 # dosbox-staging as a hard dependency, so a package-manager install pulls it
 # in automatically.
 #
-# Trigger: manual only (workflow_dispatch). `release` selects whether a
-# Release is published (default) or only build artifacts are uploaded.
+# Trigger: MANUAL only. Version is the UTC date plus a per-day serial:
+#   20261122-1, 20261122-2, ...  (serial resets every day)
 
 on:
   workflow_dispatch:
@@ -22,6 +22,13 @@ on:
         required: true
         default: true
         type: boolean
+  # Alternate trigger for automation: needs only `contents: write`, whereas
+  # workflow_dispatch needs the `Actions` scope on a fine-grained token.
+  #   curl -X POST -H "Authorization: Bearer $TOKEN" \
+  #     https://api.github.com/repos/bytecapsule/doscapsule/dispatches \
+  #     -d '{"event_type":"build-release","client_payload":{"release":"true"}}'
+  repository_dispatch:
+    types: [build-release]
 
 # Least privilege by default: build jobs only read the repository.
 permissions:
@@ -32,8 +39,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # One timestamp for the whole run: every platform's zip name and the Release
+  # One version for the whole run: every platform's zip name and the Release
   # tag must agree, so this must not be computed per matrix leg.
+  #
+  # Format is <UTC date>-<serial>, e.g. 20261122-1. The serial is derived from
+  # the releases that already exist for that date, so publishing twice on the
+  # same day yields -1 and -2 instead of colliding.
   version:
     runs-on: ubuntu-latest
     permissions:
@@ -41,9 +52,21 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - name: Compute version (UTC timestamp)
+      - name: Compute version (date + serial)
         id: tag
-        run: echo "tag=$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          DATE="$(date -u +%Y%m%d)"
+          # Highest serial already used today (0 when this is the first).
+          LAST="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 \
+                    --json tagName --jq '.[].tagName' 2>/dev/null \
+                  | grep -E "^${DATE}-[0-9]+$" | sed "s/^${DATE}-//" \
+                  | sort -n | tail -1 || true)"
+          NEXT=$(( ${LAST:-0} + 1 ))
+          echo "tag=${DATE}-${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "version: ${DATE}-${NEXT}"
 
   build:
     needs: version
@@ -129,7 +152,7 @@ jobs:
 
   release:
     needs: [version, build]
-    if: ${{ github.event.inputs.release == 'true' }}
+    if: ${{ github.event_name == 'repository_dispatch' || github.event.inputs.release == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write   # only this job may create a Release

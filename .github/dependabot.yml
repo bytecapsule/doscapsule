@@ -5,18 +5,28 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
 
-  # Frontend dependencies (frontend/package.json)
+  # Frontend dependencies
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    # Major bumps usually need code changes; review them by hand instead of
+    # letting a bot-open PR look like a routine update.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
-  # GitHub Actions used by the workflows
+  # GitHub Actions are pinned to commit SHAs on purpose (supply-chain safety),
+  # so a bot rewriting them to a new major would silently undo that. Security
+  # advisories still come through.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

@@ -1,13 +1,21 @@
 name: ci
 
-# Runs on every push/PR. Read-only, no secrets, no artefacts published:
-# this is the gate that lets outside contributions be evaluated safely.
+# Verification only: builds the frontend and runs the Go tests.
+#
+# NOTE (early phase): this is MANUAL only on purpose. While the codebase
+# changes daily, an automatic trigger on every push/PR would queue a lot of
+# builds for no benefit. When the project settles, enable the commented
+# pushes block below so every change on main is verified.
+#
+# Pull requests deliberately do NOT trigger this workflow right now: PRs come
+# mostly from Dependabot and would only add noise. A reviewer can run this
+# workflow by hand against a branch when a PR actually needs checking.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+  # Uncomment to verify every change landing on main:
+  # push:
+  #   branches: [main]
 
 permissions:
   contents: read
@@ -55,6 +63,11 @@ jobs:
       - name: Go test
         run: go test ./...
 
-      - name: Build (arm64)
+      - name: Build three targets (smoke test)
         working-directory: cmd/doscapsule
-        run: GOOS=darwin GOARCH=arm64 go build -trimpath -o /tmp/doscapsule-ci .
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          GOOS=darwin  GOARCH=arm64 go build -trimpath -o /tmp/dc-darwin-arm64 .
+          GOOS=darwin  GOARCH=amd64 go build -trimpath -o /tmp/dc-darwin-amd64 .
+          GOOS=windows GOARCH=amd64 go build -trimpath -o /tmp/dc-windows.exe .
