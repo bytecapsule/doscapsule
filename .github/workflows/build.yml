@@ -12,6 +12,12 @@ name: build
 # Local verification lives in the Makefile (make test / make zip-all), so this
 # workflow does not need to run on every push or pull request.
 #
+# If a push trigger IS ever enabled it must ignore the package-manager
+# manifests. Bumping Formula/ or bucket/ after a release creates a commit, and
+# a build triggered by that commit would bump them again - an endless loop that
+# also burns Actions minutes. The commented block under `on:` already carries
+# the paths filter, so enabling it cannot reintroduce the loop.
+#
 # Zips are FLAT (binary at the archive root) so Homebrew's `bin.install` and
 # Scoop's `bin` resolve without a wrapper directory.
 #
@@ -21,6 +27,16 @@ name: build
 #
 # Version format: <UTC date>-<serial>, e.g. 20261122-1.
 
+#
+# To verify every change landing on main, uncomment - note paths-ignore, it is
+# what keeps a manifest bump from triggering the next build:
+#
+#   push:
+#     branches: [main]
+#     paths-ignore:
+#       - 'Formula/**'
+#       - 'bucket/**'
+#
 on:
   workflow_dispatch:
     inputs:

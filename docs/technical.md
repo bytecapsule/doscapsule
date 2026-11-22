@@ -190,6 +190,19 @@ git add Formula bucket && git commit -m "packaging: ..." && git push
 `make manifest-check` compares the manifest version against the latest release
 and exits non-zero when they differ, so a forgotten bump is detectable.
 
+Commit that bump with **`[skip ci]` in the message**. The manifests live in this
+repository, so the bump is a commit on `main`; if a push trigger is ever enabled,
+that commit would start a build which bumps the manifests again — a loop that
+also burns Actions minutes. Two independent guards cover it:
+
+1. `[skip ci]` in the bump commit, and
+2. a `paths-ignore: [Formula/**, bucket/**]` filter in the push trigger (already
+   written into the commented block in `build.yml`)
+
+The only way this bites is if the manifests move out of this repo into a
+separate tap/bucket repository, which is the conventional fix — worth it only
+once releases become automatic.
+
 The underlying script is `scripts/update-packaging.sh <tag>`: it downloads the
 three zips, computes SHA-256 and rewrites the tag and hashes. It rewrites the
 values in place, so it can be run for every release.

@@ -71,7 +71,12 @@ manifest: ## point Formula/ and bucket/ at the latest GitHub release
 	@if [ -z "$(LATEST_TAG)" ]; then echo "error: cannot read the latest release (is gh authenticated?)" >&2; exit 1; fi
 	@echo "latest release: $(LATEST_TAG)"
 	@bash scripts/update-packaging.sh "$(LATEST_TAG)"
-	@echo "now commit Formula/doscapsule.rb and bucket/doscapsule.json"
+	@echo
+	@echo "Now commit and push (note [skip ci]: a manifest bump must never trigger a build,"
+	@echo "or an auto-build-on-push setup would bump again and loop forever):"
+	@echo "  git add Formula bucket"
+	@echo "  git commit -m \"packaging: bump to $(LATEST_TAG) [skip ci]\""
+	@echo "  git push"
 
 manifest-check: ## warn when the manifests lag behind the latest release
 	@echo "manifests: $(MANIFEST_TAG)"
