@@ -1,34 +1,107 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
+# ─────────────────────────────────────────────────────────────────────────────
+# DOS Capsule — combined .gitignore
+# Sections: secrets · OS/editor · Go · Node/TypeScript · build output · project
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Secrets (never commit) ───────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets
+
+# ── OS noise ─────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Editors / IDEs ───────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.#*
+\#*\#
+.project
+.settings/
+
+# ── Go ───────────────────────────────────────────────────────────────────────
 # Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
+# Test binary / coverage / profiles
 *.test
-
-# Code coverage profiles and other test artifacts
 *.out
 coverage.html
 coverage.txt
 coverage.xml
 *.coverprofile
 profile.cov
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+# Dependency dirs
+/vendor/
+# Workspace
 go.work
 go.work.sum
 
-# env file
-.env
+# ── Node / TypeScript / JavaScript ───────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+.pnp.cjs
+.pnp.loader.mjs
+.vite/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+# JS frameworks build dirs (excluding the embedded one below, handled later)
+# (dist/ at repo root is ignored further down)
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# ── Build output: frontend (embedded via go:embed) ───────────────────────────
+cmd/doscapsule/dist/
+/dist/
+
+# ── Build output: binaries (ROOT-ANCHORED) ───────────────────────────────────
+# A bare `doscapsule` would also match the source dir cmd/doscapsule/ and
+# silently drop every .go file — keep these anchored to the repo root.
+/doscapsule
+/doscapsule-arm64
+/doscapsule-amd64
+/dosgame-launcher
+/dosgame-launcher-*
+*.zip
+*.tar.gz
+*.tgz
+
+# ── Project runtime state (portable mode) ────────────────────────────────────
+/data/
+
+# ── DOSBox bundle (users install it themselves) ──────────────────────────────
+/binaries/
+
+# ── Temp / misc ──────────────────────────────────────────────────────────────
+*.log
+!docs/**/*.log
+tmp/
+temp/
+.cache/

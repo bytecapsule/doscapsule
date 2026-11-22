@@ -1,0 +1,226 @@
+name: build-release
+
+# Builds DOS Capsule for macOS (arm64 + x64) and Windows (x64), zips each, and
+# (optionally) publishes a timestamped GitHub Release.
+#
+# DOSBox is NOT bundled in the zip: users install DOSBox Staging themselves.
+# The Homebrew formula and the Scoop manifest both declare dosbox-staging as a
+# hard dependency, so a package-manager install pulls DOSBox in automatically.
+#
+# Trigger: manual only (workflow_dispatch). `release` selects whether a
+# Release is published (default) or only build artifacts are uploaded.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a GitHub Release"
+        required: true
+        default: true
+        type: boolean
+
+# Least privilege by default: build jobs only read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            goarch: arm64
+            suffix: arm64
+          - arch: x64
+            goarch: amd64
+            suffix: x64
+    runs-on: macos-14
+    permissions:
+      contents: read
+    steps:
+      # Actions are pinned to full commit SHAs so a re-pointed tag cannot inject
+      # code. Bump deliberately; never switch back to floating tags.
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Compute version (timestamp)
+        id: version
+        run: echo "tag=$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Build binary (${{ matrix.arch }})
+        working-directory: cmd/doscapsule
+        run: |
+          GOOS=darwin GOARCH=${{ matrix.goarch }} go build \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${{ steps.version.outputs.tag }}" \
+            -o ../../doscapsule-${{ matrix.suffix }} .
+
+      - name: Package zip
+        run: bash scripts/zip.sh doscapsule-${{ matrix.suffix }} ${{ matrix.suffix }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: doscapsule-macos-${{ matrix.suffix }}
+          path: doscapsule-${{ matrix.suffix }}-*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile; pnpm build
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Compute version (timestamp)
+        id: version
+        shell: bash
+        run: echo "tag=$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Build binary (windows x64)
+        working-directory: cmd/doscapsule
+        shell: bash
+        run: |
+          GOOS=windows GOARCH=amd64 go build \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${{ steps.version.outputs.tag }}" \
+            -o ../../doscapsule.exe .
+
+      - name: Package zip (windows)
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.tag }}"
+          $name = "doscapsule-windows-x64-$version"
+          New-Item -ItemType Directory -Path "stage/$name" -Force | Out-Null
+          Copy-Item doscapsule.exe "stage/$name/doscapsule.exe"
+          Copy-Item README.md "stage/$name/README.md"
+          New-Item -ItemType Directory -Path "stage/$name/docs" -Force | Out-Null
+          Copy-Item docs/usage.md,docs/configuration.md "stage/$name/docs/"
+          @"
+          DOSBox must be installed separately:
+            scoop install dosbox-staging
+            or download from: https://dosbox-staging.github.io/
+          Then run doscapsule.exe and point it at a games folder.
+          "@ | Out-File -FilePath "stage/$name/INSTALL-DOSBox.txt" -Encoding utf8
+          Compress-Archive -Path "stage/$name" -DestinationPath "$name.zip"
+          Write-Host "packaged: $name.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: doscapsule-windows-x64
+          path: doscapsule-windows-x64-*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: [build-macos, build-windows]
+    if: ${{ github.event.inputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only this job may create a Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Compute version (timestamp)
+        id: version
+        run: echo "tag=$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List release files
+        run: ls -la dist
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: DOS Capsule ${{ steps.version.outputs.tag }}
+          body: |
+            Automated build of DOS Capsule.
+
+            | Platform | File |
+            |---|---|
+            | macOS Apple Silicon | `doscapsule-arm64-*.zip` |
+            | macOS Intel | `doscapsule-x64-*.zip` |
+            | Windows x64 | `doscapsule-windows-x64-*.zip` |
+
+            DOSBox is **not** bundled. Install it first:
+            - macOS: `brew install dosbox-staging`
+            - Windows: `scoop install dosbox-staging`
+
+            Or install the app with its DOSBox dependency in one step:
+            - macOS: `brew install bytecapsule/tap/doscapsule`
+            - Windows: `scoop bucket add bytecapsule https://github.com/bytecapsule/scoop-bucket` then `scoop install doscapsule`
+          files: dist/doscapsule-*.zip
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
