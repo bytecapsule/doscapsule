@@ -33,6 +33,13 @@ scoop install doscapsule
 `dosbox-staging` yourself (`brew install dosbox-staging`,
 `scoop install dosbox-staging`, or <https://dosbox-staging.github.io/>).
 
+To upgrade later:
+
+```bash
+brew update && brew upgrade doscapsule     # Homebrew
+scoop update doscapsule                    # Scoop
+```
+
 ## Getting started
 
 **Install it → run it → pick the folder your DOS games live in.**

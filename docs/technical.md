@@ -175,14 +175,31 @@ do not collide and it resets daily.
 what makes Homebrew's `bin.install "doscapsule"` and Scoop's
 `"bin": "doscapsule.exe"` work — both resolve relative to the extraction root.
 
-### Updating the package manifests after a release
+### Updating the package manifests after a release — do not skip this
+
+Homebrew and Scoop pin an **exact version and checksum**, so a new GitHub
+release changes nothing for package-manager users until the manifests are
+bumped too. A stale manifest makes `brew upgrade` answer "already installed and
+up-to-date" for a release that exists.
 
 ```bash
-bash scripts/update-packaging.sh <tag>
+make manifest          # points Formula/ and bucket/ at the latest release
+git add Formula bucket && git commit -m "packaging: ..." && git push
 ```
 
-It downloads the three zips, computes SHA-256 and rewrites the tag and hashes in
-`Formula/doscapsule.rb` and `bucket/doscapsule.json`.
+`make manifest-check` compares the manifest version against the latest release
+and exits non-zero when they differ, so a forgotten bump is detectable.
+
+The underlying script is `scripts/update-packaging.sh <tag>`: it downloads the
+three zips, computes SHA-256 and rewrites the tag and hashes. It rewrites the
+values in place, so it can be run for every release.
+
+**On the user's side** the tap has to be refreshed before upgrading — `brew
+upgrade` alone reads the tap as it was last fetched:
+
+```bash
+brew update && brew upgrade doscapsule
+```
 
 ### Why there is no separate tap/bucket repository
 

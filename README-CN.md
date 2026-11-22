@@ -32,6 +32,13 @@ scoop install doscapsule
 （macOS `brew install dosbox-staging`；Windows `scoop install dosbox-staging`；
 或从 <https://dosbox-staging.github.io/> 下载）。
 
+之后升级：
+
+```bash
+brew update && brew upgrade doscapsule     # Homebrew
+scoop update doscapsule                    # Scoop
+```
+
 ## 开始使用
 
 **三步：装好 → 运行 → 选一个装着 DOS 游戏的文件夹。**
