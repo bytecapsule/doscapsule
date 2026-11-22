@@ -81,10 +81,10 @@ duke3d
 > 新建时注意：记事本可能自动存成 `.json.txt` / `.bat.txt`，请确认扩展名正确。
 > macOS 的「文本编辑」默认是 RTF 格式，建议用 VS Code 或干脆让 AI 帮你生成。
 
-**完整规范、字段说明和打包案例见 [docs/packaging.md](docs/packaging.md)。**
+**完整规范、字段说明和接入案例见 [docs/game-integration.md](docs/game-integration.md)。**
 
 > 💡 这篇文档整篇丢给 AI，让它帮你把散乱的游戏目录整理成上面的结构就行。
-> 应用内「打包指南」里也有一个 **复制简洁版（给 AI）** 按钮。
+> 应用内「游戏接入规范」里也有一个 **复制简洁版（给 AI）** 按钮。
 
 ## 鼠标被游戏吃掉了怎么办
 

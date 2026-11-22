@@ -1,7 +1,7 @@
 # 技术文档
 
 写给要改代码或发版的人。只想放游戏进去玩，看
-[packaging.md](packaging.md) 就够了。
+[game-integration.md](game-integration.md) 就够了。
 
 ---
 
@@ -35,7 +35,7 @@ doscapsule/
 ├── Formula/               Homebrew formula
 ├── bucket/                Scoop manifest
 ├── scripts/               zip.sh、update-packaging.sh、normalize_cover.py
-├── docs/                  本文档 + packaging.md
+├── docs/                  本文档 + game-integration.md
 ├── .github/workflows/     build.yml
 └── Makefile
 ```

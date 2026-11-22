@@ -96,7 +96,7 @@ const ZH: Dict = {
   statusScanning: "正在扫描…",
   statusCount: (n) => `当前扫描到 ${n} 个游戏`,
   statusNone: "尚未扫描游戏文件夹",
-  btnSpec: "游戏接入规范",
+  btnSpec: "接入规范",
   btnHelp: "DOSBox 操作指南",
   btnScan: "扫描游戏文件夹",
   btnLang: "中文",
@@ -193,7 +193,7 @@ duke3d`,
       h: "4. 可选：@dosbox.conf（每游戏配置）",
       p: ["@ 前缀便于在零碎 DOS 文件里识别。存在时它是该游戏启动的唯一配置来源；启动器以游戏目录为工作目录，所以相对挂载在整棵目录树搬移后依然有效：",
         "没有 @dosbox.conf 时，启动器生成内置配置（绝对路径挂载游戏目录 + call play.bat）。需要特殊机器类型、内存或声卡时再建 @dosbox.conf 微调。",
-        "注意：如果游戏目录里残留了旧的 dosbox.conf（很多整合包会带），DOSBox 会按工作目录自动加载它并覆盖启动器配置（典型症状是 cycles 被锁成 5000、画面像幻灯片），打包前务必删除或改名。"],
+        "注意：如果游戏目录里残留了旧的 dosbox.conf（很多整合包会带），DOSBox 会按工作目录自动加载它并覆盖启动器配置（典型症状是 cycles 被锁成 5000、画面像幻灯片），接入前务必删除或改名。"],
       code: `[sdl]
 fullscreen=false
 
@@ -297,7 +297,7 @@ exit`,
     "【识别规则】",
     "目录含 @launcher.json 即视为游戏；或含 @dosbox.conf + play.bat/run.bat/任意 bat/exe/com。",
     "扫描递归进行，跳过隐藏目录（.git 等），不跟随符号链接。游戏 id = 相对 games_root 的路径。",
-    "打包前检查并删除游戏目录里残留的 dosbox.conf：它会被 DOSBox 按工作目录自动加载，覆盖启动器配置（常见症状是 cycles=5000、卡成幻灯片）。",
+    "接入前检查并删除游戏目录里残留的 dosbox.conf：它会被 DOSBox 按工作目录自动加载，覆盖启动器配置（常见症状是 cycles=5000、卡成幻灯片）。",
     "收藏、最近游玩等由启动器自己保管，不要写入游戏目录。",
     "",
     "【验收标准】",
@@ -321,7 +321,7 @@ const EN: Dict = {
   statusScanning: "Scanning…",
   statusCount: (n) => `${n} game${n === 1 ? "" : "s"} scanned`,
   statusNone: "No games folder scanned",
-  btnSpec: "Packaging Guide",
+  btnSpec: "Game Integration",
   btnHelp: "DOSBox Guide",
   btnScan: "Scan Games Folder",
   btnLang: "English",
@@ -372,7 +372,7 @@ const EN: Dict = {
   helpNote:
     "Clicking inside a game makes DOSBox capture the mouse; use the shortcut above to release it. Closing the DOSBox window clears the card's Running badge within a few seconds.",
 
-  specTitle: "Game Packaging Guide",
+  specTitle: "Game Integration",
   specIntro:
     "To make a DOS game loadable by DOS Capsule, organise it as described below. Your game files are never modified.",
   guide: [
