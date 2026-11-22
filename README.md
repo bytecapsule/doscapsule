@@ -32,8 +32,7 @@ scoop install doscapsule
 ## 运行
 
 ```bash
-doscapsule              # 监听 127.0.0.1:8420（占用则随机端口），自动开浏览器
-doscapsule -port=9000   # 指定端口
+doscapsule              # 自动开浏览器，监听 127.0.0.1 的可用端口
 ```
 
 DOSBox 会自动在 PATH 中查找（brew / scoop 装好即可，无需配置）。

@@ -3,9 +3,13 @@
 ## 运行
 
 ```bash
-./doscapsule              # 监听 127.0.0.1:8420（占用则随机端口），自动开浏览器
-./doscapsule -port=9000   # 指定端口
-DOSCAPSULE_DOSBOX=/path/dosbox-staging ./doscapsule   # 指定 DOSBox
+doscapsule              # 自动开浏览器，监听 127.0.0.1 的可用端口
+```
+
+DOSBox 会自动在 PATH 中查找。只有它不在 PATH 里时才需要手动指定：
+
+```bash
+DOSCAPSULE_DOSBOX=/path/to/dosbox-staging doscapsule
 ```
 
 ## 游戏库目录
