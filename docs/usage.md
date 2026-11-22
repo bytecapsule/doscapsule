@@ -28,8 +28,23 @@ DOSCAPSULE_DOSBOX=/path/dosbox-staging ./doscapsule   # 指定 DOSBox
 
 ## DOSBox 查找顺序
 
-`$DOSCAPSULE_DOSBOX` → 二进制旁 `dosbox-bin/`、`binaries/dosbox/`、`binaries/dosbox-staging-*`
-→ 系统 PATH 的 `dosbox-staging`。
+**通常不需要任何配置**：用 brew / scoop 装好 DOSBox Staging 后，它就在 PATH 里，
+启动器会自动找到。
+
+查找顺序（找到即停）：
+
+1. 环境变量 `DOSCAPSULE_DOSBOX`（旧的 `DOSGAME_DOSBOX` 仍兼容）
+2. 可执行文件旁的 `binaries/dosbox/`（便携布局）
+3. 可执行文件旁的 `dosbox-bin/`、`resources/dosbox-bin/`
+4. 可执行文件旁的 `binaries/dosbox-staging-*`（开发布局）
+5. **系统 PATH 中的 `dosbox-staging`** —— `brew install dosbox-staging` /
+   `scoop install dosbox-staging` 装的就是走这条
+
+所以只有在 DOSBox **不在 PATH 里、也不在上面那些位置**时，才需要手动指定：
+
+```bash
+DOSCAPSULE_DOSBOX=/Applications/DOSBox\ Staging.app/Contents/MacOS/dosbox-staging doscapsule
+```
 
 ## 数据与配置存放
 

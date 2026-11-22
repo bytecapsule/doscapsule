@@ -57,11 +57,22 @@ scoop install dosbox-staging
 # 或者从官网下载：https://dosbox-staging.github.io/
 ```
 
-## 没有 DOSBox 会怎样
+## 需要手动指定 DOSBox 吗？
+
+**通常不需要。** 用 brew / scoop 装的 DOSBox Staging 就在 PATH 里，启动器会自动找到。
+
+查找顺序（找到即停）：
+
+1. 环境变量 `DOSCAPSULE_DOSBOX`（旧名 `DOSGAME_DOSBOX` 仍兼容）
+2. 可执行文件旁的 `binaries/dosbox/`（便携布局）
+3. 可执行文件旁的 `dosbox-bin/`、`resources/dosbox-bin/`
+4. 可执行文件旁的 `binaries/dosbox-staging-*`（开发布局）
+5. 系统 PATH 中的 `dosbox-staging`
+
+只有当 DOSBox **不在 PATH 里、也不在上面那些位置**时，才需要手动指定：
+
+```bash
+DOSCAPSULE_DOSBOX=/Applications/DOSBox\ Staging.app/Contents/MacOS/dosbox-staging doscapsule
+```
 
 启动器运行时不强制要求 DOSBox 存在；只有点"启动游戏"时才需要它。
-若找不到，会依次查找：
-
-1. 环境变量 `DOSCAPSULE_DOSBOX`（兼容旧名 `DOSGAME_DOSBOX`）
-2. 可执行文件旁的 `binaries/dosbox/`、`dosbox-bin/`
-3. PATH 中的 `dosbox-staging`

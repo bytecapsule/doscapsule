@@ -32,7 +32,13 @@ scoop install doscapsule
 ```bash
 doscapsule              # 监听 127.0.0.1:8420（占用则随机端口），自动开浏览器
 doscapsule -port=9000   # 指定端口
-DOSCAPSULE_DOSBOX=/path/to/dosbox-staging doscapsule   # 指定 DOSBox
+```
+
+DOSBox 会自动在 PATH 中查找（brew / scoop 装好即可，无需配置）。
+只有当 DOSBox 不在 PATH 里时才需要手动指定：
+
+```bash
+DOSCAPSULE_DOSBOX=/path/to/dosbox-staging doscapsule
 ```
 
 首次启动后在界面上选择游戏库根目录，之后自动记忆。
