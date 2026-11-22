@@ -30,20 +30,58 @@ scoop install doscapsule
 （macOS `brew install dosbox-staging`；Windows `scoop install dosbox-staging`；
 或从 <https://dosbox-staging.github.io/> 下载）。
 
-## 运行
+## 开始使用
+
+**三步：装好 → 运行 → 选一个装着 DOS 游戏的文件夹。**
 
 ```bash
-doscapsule              # 自动开浏览器，监听 127.0.0.1 的可用端口
+doscapsule              # 自动开浏览器
 ```
 
-DOSBox 会自动在 PATH 中查找（brew / scoop 装好即可，无需配置）。
-只有当 DOSBox 不在 PATH 里时才需要手动指定：
+然后点顶栏的 **扫描游戏文件夹**，选中你的 DOS 游戏目录即可。
+扫描结果、收藏和游玩记录会自动保存，下次打开直接就在。
 
-```bash
-DOSCAPSULE_DOSBOX=/path/to/dosbox-staging doscapsule
+## 游戏目录要准备什么
+
+启动器不会动你的游戏文件，但每个游戏目录里需要几个**说明文件**，
+告诉它这游戏叫什么、怎么启动：
+
+```
+你的游戏目录/
+└── DUKE3D/
+    ├── @launcher.json      ← 必须有，至少写一个 title
+    ├── play.bat            ← 必须有，一行主程序名
+    ├── @dosbox.conf        ← 可选，需要特殊配置时才写
+    ├── @cover.jpg          ← 可选，封面
+    └── DUKE3D.EXE …        ← 游戏本体，原样不动
 ```
 
-首次启动后在界面上选择游戏库根目录，之后自动记忆。
+最小的两个文件长这样：
+
+```json
+{ "title": "Duke Nukem 3D", "year": 1996, "genre": "FPS" }
+```
+```bat
+@echo off
+duke3d
+```
+
+**完整规范、字段说明和打包案例见 [docs/packaging.md](docs/packaging.md)。**
+
+> 💡 这篇文档整篇丢给 AI，让它帮你把散乱的游戏目录整理成上面的结构就行。
+> 应用内「打包指南」里也有一个 **复制简洁版（给 AI）** 按钮。
+
+## 鼠标被游戏吃掉了怎么办
+
+DOS 游戏一旦捕获鼠标，光标就出不来，这是 DOSBox 的行为，不是卡住了：
+
+| 操作 | 热键 |
+|---|---|
+| **释放 / 重新捕获鼠标** | **⌘F10**（macOS）· **Ctrl+F10**（Windows/Linux）· 鼠标中键 |
+| 全屏切换 | Alt+Enter |
+| 退出 DOSBox | ⌘F9 / Ctrl+F9，或直接关掉 DOSBox 窗口 |
+
+关掉 DOSBox 窗口后，卡片上的「运行中」徽标会在几秒内自动消失。
 
 ## 功能
 
@@ -70,7 +108,7 @@ make zip-x64   # 打 macOS x64 包
 make help      # 查看全部目标
 ```
 
-文档见 [docs/](docs/README.md)。
+架构、API、发布流程见 [docs/technical.md](docs/technical.md)。
 
 ## 许可
 

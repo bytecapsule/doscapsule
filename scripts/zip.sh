@@ -46,7 +46,7 @@ case "$BIN" in
 esac
 cp README.md "$STAGE/README.md"
 mkdir -p "$STAGE/docs"
-cp docs/usage.md docs/configuration.md "$STAGE/docs/" 2>/dev/null || true
+cp docs/packaging.md "$STAGE/docs/" 2>/dev/null || true
 
 cat > "$STAGE/INSTALL-DOSBox.txt" <<'EOT'
 DOSBox must be installed separately:
