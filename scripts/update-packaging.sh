@@ -40,9 +40,21 @@ python3 - "$FORMULA" "$TAG" "$SHA_ARM" "$SHA_X64" <<'PYEOF'
 import re, sys
 path, tag, sha_arm, sha_x64 = sys.argv[1:5]
 s = open(path).read()
-s = s.replace('<TAG>', tag)
-# first placeholder is arm64, second is x64
-s = s.replace('<SHA256_ARM64>', sha_arm, 1).replace('<SHA256_X64>', sha_x64, 1)
+# Rewrite the tag inside both download URLs. Matching the URL rather than a
+# placeholder keeps this script re-runnable: after the first release the tag is
+# a real value, not "<TAG>".
+s = re.sub(r'(releases/download/)[^/]+(/doscapsule-arm64-)[^/.]+(\.zip)',
+           lambda m: m.group(1) + tag + m.group(2) + tag + m.group(3), s)
+s = re.sub(r'(releases/download/)[^/]+(/doscapsule-x64-)[^/.]+(\.zip)',
+           lambda m: m.group(1) + tag + m.group(2) + tag + m.group(3), s)
+# Then the two sha256 values, in file order: arm64 first, x64 second.
+shas = iter([sha_arm, sha_x64])
+def sub_sha(m):
+    try:
+        return 'sha256 "' + next(shas) + '"'
+    except StopIteration:
+        return m.group(0)
+s = re.sub(r'sha256 "[0-9a-f]{64}"', sub_sha, s)
 open(path, 'w').write(s)
 print("  updated:", path)
 PYEOF
@@ -50,11 +62,17 @@ PYEOF
 # Scoop manifest.
 SCOOP="$ROOT/bucket/doscapsule.json"
 python3 - "$SCOOP" "$TAG" "$SHA_WIN" <<'PYEOF'
-import sys
+import json, sys
 path, tag, sha_win = sys.argv[1:4]
-s = open(path).read()
-s = s.replace('REPLACE_WITH_TAG', tag).replace('REPLACE_WITH_SHA256', sha_win)
-open(path, 'w').write(s)
+d = json.load(open(path))
+d['version'] = tag
+d['architecture']['64bit']['url'] = (
+    f'https://github.com/bytecapsule/doscapsule/releases/download/{tag}'
+    f'/doscapsule-windows-x64-{tag}.zip'
+)
+d['architecture']['64bit']['hash'] = sha_win
+json.dump(d, open(path, 'w'), indent=4)
+open(path, 'a').write('\n')
 print("  updated:", path)
 PYEOF
 
