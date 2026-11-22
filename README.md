@@ -56,15 +56,30 @@ doscapsule              # 自动开浏览器
     └── DUKE3D.EXE …        ← 游戏本体，原样不动
 ```
 
-最小的两个文件长这样：
+### 这两个是必填的文件，要你自己新建
+
+**第一个文件：`@launcher.json`** —— 游戏叫什么、哪一年、什么类型
+
+在游戏目录里新建一个文本文件，命名为 `@launcher.json`（注意前面的 `@`），内容：
 
 ```json
 { "title": "Duke Nukem 3D", "year": 1996, "genre": "FPS" }
 ```
+
+**第二个文件：`play.bat`** —— 告诉 DOSBox 要运行哪个程序
+
+同样在游戏目录里新建，命名为 `play.bat`，内容：
+
 ```bat
 @echo off
 duke3d
 ```
+
+这里的 `duke3d` 就是游戏主程序的**文件名，去掉 `.exe`**。
+比如主程序叫 `PRINCE.EXE`，就写 `prince`；叫 `WOLF3D.EXE`，就写 `wolf3d`。
+
+> 新建时注意：记事本可能自动存成 `.json.txt` / `.bat.txt`，请确认扩展名正确。
+> macOS 的「文本编辑」默认是 RTF 格式，建议用 VS Code 或干脆让 AI 帮你生成。
 
 **完整规范、字段说明和打包案例见 [docs/packaging.md](docs/packaging.md)。**
 
