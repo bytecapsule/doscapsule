@@ -241,7 +241,15 @@ func (l *Launcher) Launch(root, id string) (string, *exec.Cmd, error) {
 	}
 	dosbox := resolveDosbox()
 	// Order matters: defaults first, the game's conf last so it can override.
-	cmd := exec.Command(dosbox, "-conf", defaults, "-conf", confArg)
+	//
+	// --nolocalconf is load-bearing. DOSBox Staging also loads a "local"
+	// dosbox.conf from the working directory (we set that to the game folder),
+	// and it loads it BEFORE these -conf files. Our keys would win, but the
+	// leftover file's [autoexec] section still gets concatenated in, so a
+	// repack that ships its own dosbox.conf can inject mount commands or
+	// launch the wrong binary. Refusing the local conf makes a stray file
+	// harmless instead of something the user has to hunt down and delete.
+	cmd := exec.Command(dosbox, "--nolocalconf", "-conf", defaults, "-conf", confArg)
 	cmd.Dir = cmdDir
 	// Keep DOSBox's own output next to the state file: when a game renders
 	// text wrongly this log says which code page / layout / warnings applied.

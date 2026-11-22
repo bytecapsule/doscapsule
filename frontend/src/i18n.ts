@@ -14,7 +14,9 @@ function storedLang(): Lang {
     const v = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
     if (v === "en" || v === "zh") { return v; }
   } catch { /* private mode */ }
-  return "zh";
+  // English is the default: the first screen a new user sees is English, and
+  // the toggle is in the top bar for anyone who wants Chinese.
+  return "en";
 }
 
 const [lang, setLangSignal] = createSignal<Lang>(storedLang());
@@ -193,7 +195,7 @@ duke3d`,
       h: "4. 可选：@dosbox.conf（每游戏配置）",
       p: ["@ 前缀便于在零碎 DOS 文件里识别。存在时它是该游戏启动的唯一配置来源；启动器以游戏目录为工作目录，所以相对挂载在整棵目录树搬移后依然有效：",
         "没有 @dosbox.conf 时，启动器生成内置配置（绝对路径挂载游戏目录 + call play.bat）。需要特殊机器类型、内存或声卡时再建 @dosbox.conf 微调。",
-        "注意：如果游戏目录里残留了旧的 dosbox.conf（很多整合包会带），DOSBox 会按工作目录自动加载它并覆盖启动器配置（典型症状是 cycles 被锁成 5000、画面像幻灯片），接入前务必删除或改名。"],
+        "游戏目录里残留的旧 dosbox.conf 不用管：启动器会用 --nolocalconf 启动 DOSBox，那个文件不会被加载。"],
       code: `[sdl]
 fullscreen=false
 
@@ -418,7 +420,7 @@ duke3d`,
       h: "4. Optional: @dosbox.conf (per-game config)",
       p: ["The @ prefix makes metadata files easy to spot among loose DOS files. When present it is the single source of truth for launching; DOSBox runs with the game folder as its working directory, so relative mounts survive moving the whole tree:",
         "Without @dosbox.conf the launcher generates an equivalent built-in config (absolute mount + call play.bat). Create one to tune machine type, memory or sound.",
-        "Note: a stale dosbox.conf left in the game folder (common in repacked releases) is auto-loaded from the working directory and overrides the launcher's settings — a typical symptom is cycles pinned to 5000 and a slideshow. Remove or rename it before packaging."],
+        "A stale dosbox.conf left in the game folder (common in repacked releases) is harmless: the launcher starts DOSBox with --nolocalconf, so that file is never loaded."],
       code: `[sdl]
 fullscreen=false
 
@@ -521,7 +523,7 @@ exit`,
     "",
     "[Detection rules]",
     "A folder is a game when it contains @launcher.json, or contains @dosbox.conf plus play.bat/run.bat/any bat/exe/com.",
-    "Before packaging, delete any stale dosbox.conf left in the game folder: DOSBox auto-loads it from the working directory and it overrides the launcher config (typical symptom: cycles=5000, slideshow).",
+    "A stale dosbox.conf in the game folder needs no cleanup: DOSBox runs with --nolocalconf, so only @dosbox.conf and the built-in defaults are used.",
     "Scanning is recursive, skips hidden folders (.git …) and never follows symlinks. Game id = path relative to games_root.",
     "Favorites/recent state is owned by the launcher; never write it into game folders.",
     "",

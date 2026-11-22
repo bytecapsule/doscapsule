@@ -1,176 +1,193 @@
-# 技术文档
+# Technical Notes
 
-写给要改代码或发版的人。只想放游戏进去玩，看
-[game-integration.md](game-integration.md) 就够了。
+For anyone changing code or cutting a release. If you only want to play your
+games, read [game-integration.md](game-integration.md) instead.
 
 ---
 
-## 1. 技术栈
+## 1. Stack
 
-| 层 | 技术 |
+| Layer | Tech |
 |---|---|
-| 后端 | Go 1.27+，单一 `package main` |
-| 前端 | SolidJS + TypeScript + Vite |
-| 体裁 | 前端构建产物通过 `//go:embed` 打进同一个二进制 |
-| 包管理 | pnpm |
-| 模拟器 | DOSBox Staging（**不打包进 zip**，由包管理器作为依赖安装） |
+| Backend | Go 1.27+, a single `package main` |
+| Frontend | SolidJS + TypeScript + Vite |
+| Delivery | The frontend build is embedded into the same binary via `//go:embed` |
+| Package manager | pnpm |
+| Emulator | DOSBox Staging (**not** bundled in the zip; installed as a package dependency) |
 
-没有数据库、没有网络请求、没有 cgo。运行时只监听 `127.0.0.1`。
+No database, no network calls, no cgo. At runtime it only listens on
+`127.0.0.1`.
 
 ---
 
-## 2. 目录结构
+## 2. Layout
 
 ```
 doscapsule/
-├── cmd/doscapsule/        Go 源码 + go:embed 资源
-│   ├── main.go            embed、HTTP server、/api/* 路由、开浏览器
-│   ├── launcher.go        DOSBox 路径解析、defaults.conf、exec 启动
-│   ├── catalog.go         游戏扫描、LocalGame、manifest 读写
-│   ├── state.go           state.json、便携/系统目录解析
-│   ├── util.go            resolveGameDir（防路径穿越）等
-│   ├── dist/              前端构建产物（gitignore，embed 源）
+├── cmd/doscapsule/        Go sources + go:embed resources
+│   ├── main.go            embed, HTTP server, /api/* routes, browser launch
+│   ├── launcher.go        DOSBox resolution, defaults.conf, exec
+│   ├── catalog.go         scanning, LocalGame, manifest I/O
+│   ├── state.go           state.json, portable vs system config dir
+│   ├── util.go            resolveGameDir (path traversal guard) etc.
+│   ├── dist/              frontend build output (gitignored, embed source)
 │   └── resources/         fallback-cover.jpg
 ├── frontend/              SolidJS + Vite
 ├── Formula/               Homebrew formula
 ├── bucket/                Scoop manifest
-├── scripts/               zip.sh、update-packaging.sh、normalize_cover.py
-├── docs/                  本文档 + game-integration.md
+├── scripts/               zip.sh, update-packaging.sh, normalize_cover.py
+├── docs/                  this file + the integration docs
 ├── .github/workflows/     build.yml
 └── Makefile
 ```
 
-采用 Go 社区标准的 `cmd/` 布局。源码约 1200 行，刻意保持**单一 package**——
-拆成多个 internal 包在这个体量上收益小、反而增加循环依赖和导出噪音。
+Standard Go `cmd/` layout. The sources stay a **single package** (~1,200 lines):
+splitting into several internal packages at this size buys little and adds
+export noise and import cycles.
 
 ---
 
-## 3. 关键设计决策
+## 3. Design decisions
 
-### `go:embed` 单文件分发
-前端 `vite build` 直接输出到 `cmd/doscapsule/dist`，Go 用
-`//go:embed all:dist` 把它编进二进制。对外只有一个可执行文件，没有资源目录要拷。
+### `go:embed` single-file delivery
+`vite build` writes straight into `cmd/doscapsule/dist`, and Go embeds it with
+`//go:embed all:dist`. One executable, no resource directory to ship.
 
-### 便携模式
-可执行文件旁存在 `binaries/dosbox/`（即自带 DOSBox）时，状态写到旁边的 `data/`，
-整个文件夹可以拷来拷去。否则回退到系统用户配置目录：
+### Portable mode
+When a `binaries/dosbox/` folder sits next to the executable (i.e. a bundled
+DOSBox), state goes into a sibling `data/` and the whole folder can be copied
+around. Otherwise the system config dir is used:
 
-| 平台 | 路径 |
+| Platform | Path |
 |---|---|
 | macOS | `~/Library/Application Support/doscapsule` |
 | Linux | `~/.config/doscapsule` |
 | Windows | `%AppData%\doscapsule` |
 
-### 配置合并顺序
-启动 DOSBox 时先传启动器生成的 `defaults.conf`，再传游戏自己的 `@dosbox.conf`：
+### Config merge order
+The launcher passes its generated defaults first, then the game's own config:
 
 ```
-dosbox-staging -conf <data>/launch/defaults.conf -conf <game>/@dosbox.conf
+dosbox-staging --nolocalconf -conf <data>/launch/defaults.conf -conf <game>/@dosbox.conf
 ```
 
-DOSBox 后传的配置胜出，所以游戏配置永远可以覆盖默认值，而默认值补上游戏没写的部分。
+DOSBox applies the files in order, so the game config always wins while the
+defaults fill in whatever it leaves out.
 
-### DOSBox 查找顺序
+**`--nolocalconf` is load-bearing.** DOSBox Staging also loads a "local"
+`dosbox.conf` from the working directory — which is the game folder — and it
+loads it *before* the `-conf` files. Our keys would still win, but the leftover
+file's `[autoexec]` section gets concatenated in, so a repack shipping its own
+`dosbox.conf` could inject mount commands or launch the wrong binary. Refusing
+it makes a stray file harmless instead of something the user must hunt down.
+
+### DOSBox resolution order
 ```
-1. 环境变量 DOSCAPSULE_DOSBOX（旧名 DOSGAME_DOSBOX 仍兼容）
-2. 可执行文件旁 binaries/dosbox/
-3. 可执行文件旁 dosbox-bin/、resources/dosbox-bin/
-4. 可执行文件旁 binaries/dosbox-staging-*（开发布局）
-5. 系统 PATH 中的 dosbox-staging
+1. DOSCAPSULE_DOSBOX env var (legacy DOSGAME_DOSBOX still honoured)
+2. binaries/dosbox/ next to the executable
+3. dosbox-bin/ or resources/dosbox-bin/ next to the executable
+4. binaries/dosbox-staging-* next to the executable (dev layout)
+5. dosbox-staging on PATH
 ```
-包管理器安装走第 5 条，所以终端用户不需要任何配置。
+A package-manager install lands on step 5, so end users configure nothing.
 
 ### MIDI
-macOS 的 CoreMIDI 没有内置合成器，所以默认配置写
-`mididevice = fluidsynth` + `soundfonts/default.sf2`（GeneralUser GS），
-否则老游戏的 MIDI 配乐在 Mac 上是静音。
+macOS CoreMIDI has no built-in synthesiser, so the defaults set
+`mididevice = fluidsynth` with `soundfonts/default.sf2` (GeneralUser GS);
+without it, MIDI soundtracks are silent on a Mac.
 
-### 路径安全
-游戏 id 是相对 `games_root` 的路径。所有由前端传入的 id 都过
-`resolveGameDir()` 做前缀校验，防止 `../` 穿越出库目录。
+### Path safety
+A game id is a path relative to `games_root`. Every id coming from the frontend
+goes through `resolveGameDir()`, which validates the prefix and rejects `../`
+escapes.
 
 ---
 
 ## 4. HTTP API
 
-| 路由 | 作用 |
+| Route | Purpose |
 |---|---|
-| `POST /api/scan` | 扫描指定目录 |
-| `GET /api/games` | 游戏列表 |
-| `GET /api/genres` | 类型列表 |
-| `GET /api/remembered_root` | 上次的库目录 |
-| `POST /api/launch` / `POST /api/stop` | 启动 / 停止 |
-| `GET /api/running` | 运行中的游戏 |
-| `POST /api/favorite` | 收藏 |
-| `GET`/`POST /api/conf` | 读写 `@dosbox.conf` |
-| `POST /api/open` | 打开游戏文件夹 |
-| `POST /api/pick_folder` | 系统目录选择器 |
-| `GET /media?path=` | 封面 / 截图 |
+| `POST /api/scan` | Scan a directory |
+| `GET /api/games` | Game list |
+| `GET /api/genres` | Genre list |
+| `GET /api/remembered_root` | Last library folder |
+| `POST /api/launch` / `POST /api/stop` | Launch / stop |
+| `GET /api/running` | Running games |
+| `POST /api/favorite` | Toggle favourite |
+| `GET`/`POST /api/conf` | Read / write `@dosbox.conf` |
+| `POST /api/open` | Open the game folder |
+| `POST /api/pick_folder` | System folder picker |
+| `GET /media?path=` | Covers / screenshots |
 
-前端通过 `frontend/src/api/tauri.ts` 里的 fetch shim 调用（文件名是历史遗留）。
+The frontend calls these through the fetch shim in
+`frontend/src/api/tauri.ts` (the filename is a leftover).
 
 ---
 
-## 5. 构建
+## 5. Build
 
-统一入口是 Makefile，跨平台可用：
+The Makefile is the single entry point and works on every platform:
 
 ```bash
-make dist      # 只构建前端（输出到 cmd/doscapsule/dist）
-make build     # 构建当前平台二进制
-make build-arm # 交叉编译 macOS arm64
-make build-x64 # 交叉编译 macOS x64
-make test      # 跑测试
-make run       # 构建并运行
-make zip-arm   # 打 arm64 发布包
-make zip-x64   # 打 x64 发布包
-make clean     # 清理产物
-make help      # 查看全部目标
+make dist      # frontend only, into cmd/doscapsule/dist
+make build     # binary for the current platform
+make build-arm # cross-compile macOS arm64
+make build-x64 # cross-compile macOS x64
+make test      # tests
+make run       # build and run
+make zip-arm   # package for arm64
+make zip-x64   # package for x64
+make clean     # remove artefacts
+make help      # list targets
 ```
 
-手动构建：
+By hand:
 
 ```bash
 cd frontend && pnpm install && pnpm build && cd ..
 go build -o doscapsule ./cmd/doscapsule
 ```
 
-前提：Go 1.27+、Node.js 22+、pnpm 12+。
+Requires Go 1.27+, Node.js 22+, pnpm 12+.
 
 ---
 
-## 6. 发布
+## 6. Release
 
-### 流水线
-`.github/workflows/build.yml` 是唯一的 workflow，**手动触发**（本地 `make` 才是日常验证）。
+### Pipeline
+`.github/workflows/build.yml` is the only workflow and is **dispatched
+manually** (day-to-day verification is `make`).
 
-- 永远执行：前端构建 → `go test` → 三平台交叉编译 → 打 3 个 zip → 上传 artifact
-- 勾选 `release` 时额外：把这些 zip 发布成 GitHub Release
+- Always: build the frontend, `go test`, cross-compile three targets, zip them,
+  upload artifacts
+- With the `release` input ticked: also publish those zips as a GitHub Release
 
-全部跑在 `ubuntu-latest` 上——Go 交叉编译不需要 macOS runner，也没有 cgo 或签名需求。
+Everything runs on `ubuntu-latest` — Go cross-compiles, and nothing needs cgo or
+code signing, so macOS runners are unnecessary.
 
-### 版本号
-`<UTC 日期>-<流水号>`，例如 `20261122-1`、`20261122-2`。
-流水号由已有的 release 推导，同一天发两次不会撞车，跨日自动重置。
+### Version
+`<UTC date>-<serial>`, e.g. `20261122-1`, `20261122-2`. The serial is derived
+from the releases that already exist for that date, so two releases in one day
+do not collide and it resets daily.
 
-### zip 布局
-**扁平结构**：二进制直接在压缩包根目录，不套一层文件夹。
-这是 Homebrew 的 `bin.install "doscapsule"` 和 Scoop 的 `"bin": "doscapsule.exe"`
-能工作的前提——两者都相对解压根目录解析，套一层就找不到。
+### Zip layout
+**Flat**: the binary sits at the archive root with no wrapper directory. This is
+what makes Homebrew's `bin.install "doscapsule"` and Scoop's
+`"bin": "doscapsule.exe"` work — both resolve relative to the extraction root.
 
-### 发布后更新包管理器清单
+### Updating the package manifests after a release
 
 ```bash
 bash scripts/update-packaging.sh <tag>
 ```
 
-脚本会下载三个 zip、算 SHA-256、改写 `Formula/doscapsule.rb` 和
-`bucket/doscapsule.json` 里的版本号与哈希。
+It downloads the three zips, computes SHA-256 and rewrites the tag and hashes in
+`Formula/doscapsule.rb` and `bucket/doscapsule.json`.
 
-### 为什么不需要额外的 tap / bucket 仓库
+### Why there is no separate tap/bucket repository
 
-`Formula/` 在仓库根目录，所以本仓库自己就是一个 Homebrew tap；
-`bucket/` 同理让它成为一个 Scoop bucket。用户：
+`Formula/` at the repo root makes this repository a Homebrew tap, and `bucket/`
+makes it a Scoop bucket, so no second repository is needed:
 
 ```bash
 brew tap bytecapsule/doscapsule https://github.com/bytecapsule/doscapsule
@@ -183,15 +200,20 @@ scoop bucket add bytecapsule https://github.com/bytecapsule/doscapsule
 scoop install doscapsule
 ```
 
-两者都在清单里把 `dosbox-staging` 声明为**强制依赖**，安装时自动带上。
+Both declare `dosbox-staging` as a hard dependency, so installing pulls DOSBox
+in automatically.
 
 ---
 
-## 7. 安全与贡献
+## 7. Security and contributions
 
-- 所有 GitHub Actions **钉死到 commit SHA**，防止 tag 被重指向后注入代码
-- 工作流默认最小权限：顶层 `contents: read`，只有 release job 有写权限
-- 每次 checkout 都 `persist-credentials: false`
-- PR 不自动触发流水线（初期策略），改为手动 dispatch
-- `CODEOWNERS` + 分支保护：合并进 `main` 需要 owner 审批
-- 漏洞上报见 [SECURITY.md](../SECURITY.md)
+- Every GitHub Action is **pinned to a commit SHA**, so a re-pointed tag cannot
+  inject code
+- Least privilege: `contents: read` at the top level, write only on the release
+  job
+- `persist-credentials: false` on every checkout
+- Pull requests do not trigger the pipeline (early-phase policy); it is
+  dispatched by hand
+- `CODEOWNERS` plus branch protection: merging into `main` needs the owner's
+  approval
+- Reporting vulnerabilities: [SECURITY.md](../SECURITY.md)
