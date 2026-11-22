@@ -1,14 +1,14 @@
 {
     "$schema": "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/schema.json",
-    "version": "REPLACE_WITH_TAG",
+    "version": "20261122-1",
     "description": "DOS Capsule - pure-local DOS game launcher (SolidJS UI embedded in a Go binary)",
     "homepage": "https://github.com/bytecapsule/doscapsule",
     "license": "MIT",
     "depends": ["dosbox-staging"],
     "architecture": {
         "64bit": {
-            "url": "https://github.com/bytecapsule/doscapsule/releases/download/REPLACE_WITH_TAG/doscapsule-windows-x64-REPLACE_WITH_TAG.zip",
-            "hash": "REPLACE_WITH_SHA256"
+            "url": "https://github.com/bytecapsule/doscapsule/releases/download/20261122-1/doscapsule-windows-x64-20261122-1.zip",
+            "hash": "e1392e3b6f880acc779b262b125c199dc922ca3344375ddc00d283774fb163ba"
         }
     },
     "bin": "doscapsule.exe",

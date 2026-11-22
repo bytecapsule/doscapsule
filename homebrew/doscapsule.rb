@@ -1,22 +1,16 @@
 # Homebrew formula for doscapsule.
 #
-# We publish TWO zips per release - arm64 (Apple Silicon) and x64 (Intel):
-#   doscapsule-arm64-<TAG>.zip
-#   doscapsule-x64-<TAG>.zip
-#
-# The formula picks the right one for the host CPU:
-#   - Apple Silicon (M1/M2/...):  arm64
-#   - Intel Mac:                  x64
-# Both are native; no Rosetta translation needed on either side.
+# Two zips are published per release - arm64 (Apple Silicon) and x64 (Intel) -
+# and the formula picks by host CPU, so both are native (no Rosetta).
 #
 # `dosbox-staging` is a HARD dependency: brew installs it automatically when
-# absent, matching the host arch (Intel -> x86_64, Apple Silicon -> arm64).
+# absent, matching the host architecture.
 #
-# To publish:
-#   1. Set this repo up as a Homebrew tap named bytecapsule/homebrew-tap.
-#   2. Replace bytecapsule/doscapsule below and <TAG> with a real Release tag.
-#   3. Set the two sha256 lines to the zips' actual hashes.
-#   4. Users run: brew tap bytecapsule/homebrew-tap && brew install doscapsule
+# Users: brew tap bytecapsule/homebrew-tap && brew install doscapsule
+#
+# Maintainers: after publishing a release, run
+#   scripts/update-packaging.sh <tag>
+# to rewrite the tag and both sha256 values below.
 
 class Doscapsule < Formula
   desc "Pure-local DOS game launcher (SolidJS UI embedded in a Go binary)"
@@ -24,11 +18,11 @@ class Doscapsule < Formula
   license "MIT"
 
   if Hardware::CPU.arm?
-    url "https://github.com/bytecapsule/doscapsule/releases/download/<TAG>/doscapsule-arm64-<TAG>.zip"
-    sha256 "<SHA256_ARM64>"
+    url "https://github.com/bytecapsule/doscapsule/releases/download/20261122-1/doscapsule-arm64-20261122-1.zip"
+    sha256 "7301dfbc8796620bedc1c7b8f579a63bcacaa9831f2cc9a0971c631f5212879a"
   else
-    url "https://github.com/bytecapsule/doscapsule/releases/download/<TAG>/doscapsule-x64-<TAG>.zip"
-    sha256 "<SHA256_X64>"
+    url "https://github.com/bytecapsule/doscapsule/releases/download/20261122-1/doscapsule-x64-20261122-1.zip"
+    sha256 "6c8479096b8b7243a2c04c48ef780fe51224ddd9a6ca0c323edb84be8b7ee207"
   end
 
   # Hard dependency: brew installs DOSBox Staging automatically if absent.
