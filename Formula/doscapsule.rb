@@ -6,7 +6,7 @@
 # `dosbox-staging` is a HARD dependency: brew installs it automatically when
 # absent, matching the host architecture.
 #
-# Users: brew tap bytecapsule/homebrew-tap && brew install doscapsule
+# Users: brew tap bytecapsule/doscapsule && brew install doscapsule
 #
 # Maintainers: after publishing a release, run
 #   scripts/update-packaging.sh <tag>

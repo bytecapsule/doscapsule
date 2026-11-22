@@ -11,12 +11,13 @@ DOSBox Staging 是必需的模拟器。**下面的包管理器安装会自动带
 
 **macOS（Homebrew）**
 ```bash
-brew install bytecapsule/tap/doscapsule
+brew tap bytecapsule/doscapsule
+brew install doscapsule
 ```
 
 **Windows 10/11（Scoop）**
 ```powershell
-scoop bucket add bytecapsule https://github.com/bytecapsule/scoop-bucket
+scoop bucket add bytecapsule https://github.com/bytecapsule/doscapsule
 scoop install doscapsule
 ```
 

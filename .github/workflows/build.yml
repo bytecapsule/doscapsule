@@ -1,18 +1,25 @@
-name: build-release
+name: build
 
-# Builds DOS Capsule for macOS (arm64 + x64) and Windows (x64) on Linux
-# runners - Go cross-compiles, and nothing here needs cgo or code signing, so
-# macOS runners are unnecessary.
+# The single pipeline for this project.
+#
+# It always BUILDS: frontend, Go tests, and macOS (arm64 + x64) plus Windows
+# (x64) binaries, packaged as three zips and uploaded as artifacts.
+#
+# Tick `release` when dispatching and it also PUBLISHES those zips as a
+# timestamped GitHub Release. Left unticked it stops after the artifacts, which
+# is the "just give me a build" path.
+#
+# Local verification lives in the Makefile (make test / make zip-all), so this
+# workflow does not need to run on every push or pull request.
 #
 # Zips are FLAT (binary at the archive root) so Homebrew's `bin.install` and
 # Scoop's `bin` resolve without a wrapper directory.
 #
-# DOSBox is NOT bundled: the Homebrew formula and the Scoop manifest declare
-# dosbox-staging as a hard dependency, so a package-manager install pulls it
-# in automatically.
+# DOSBox is NOT bundled: Formula/doscapsule.rb and bucket/doscapsule.json both
+# declare dosbox-staging as a hard dependency, so a package-manager install
+# pulls it in automatically.
 #
-# Trigger: MANUAL only. Version is the UTC date plus a per-day serial:
-#   20261122-1, 20261122-2, ...  (serial resets every day)
+# Version format: <UTC date>-<serial>, e.g. 20261122-1.
 
 on:
   workflow_dispatch:
@@ -190,8 +197,8 @@ jobs:
             - Windows: `scoop install dosbox-staging`
 
             Or install the app with its DOSBox dependency in one step:
-            - macOS: `brew install bytecapsule/tap/doscapsule`
-            - Windows: `scoop bucket add bytecapsule https://github.com/bytecapsule/scoop-bucket` then `scoop install doscapsule`
+            - macOS: `brew tap bytecapsule/doscapsule && brew install doscapsule`
+            - Windows: `scoop bucket add bytecapsule https://github.com/bytecapsule/doscapsule` then `scoop install doscapsule`
           files: dist/doscapsule-*.zip
           fail_on_unmatched_files: true
           draft: false

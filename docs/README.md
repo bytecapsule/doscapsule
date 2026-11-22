@@ -4,7 +4,8 @@ DOS Capsule 的文档。
 
 ## 面向使用者
 
-- [使用指南](usage.md) —— 安装、运行、扫描游戏库、玩法
+- [安装](installation.md) —— Homebrew / Scoop / 手动 zip
+- [使用指南](usage.md) —— 运行、扫描游戏库、玩法
 - [配置说明](configuration.md) —— `@launcher.json`、`@dosbox.conf`、DOSBox 资源
 
 ## 面向开发者 / 贡献者

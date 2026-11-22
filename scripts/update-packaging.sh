@@ -35,7 +35,7 @@ echo "  x64   : ${SHA_X64}"
 echo "  win64 : ${SHA_WIN}"
 
 # Homebrew formula: replace <TAG> and the two sha256 placeholders.
-FORMULA="$ROOT/homebrew/doscapsule.rb"
+FORMULA="$ROOT/Formula/doscapsule.rb"
 python3 - "$FORMULA" "$TAG" "$SHA_ARM" "$SHA_X64" <<'PYEOF'
 import re, sys
 path, tag, sha_arm, sha_x64 = sys.argv[1:5]
@@ -48,7 +48,7 @@ print("  updated:", path)
 PYEOF
 
 # Scoop manifest.
-SCOOP="$ROOT/scoop/doscapsule.json"
+SCOOP="$ROOT/bucket/doscapsule.json"
 python3 - "$SCOOP" "$TAG" "$SHA_WIN" <<'PYEOF'
 import sys
 path, tag, sha_win = sys.argv[1:4]

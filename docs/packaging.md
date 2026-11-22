@@ -42,4 +42,4 @@ zip 布局：
 
 ## Homebrew
 
-homebrew/doscapsule.rb 是 formula，把 dosbox-staging 声明为强制依赖，brew install doscapsule 时自动装上。详细见 homebrew/README.md。
+Formula/doscapsule.rb 是 Homebrew formula，bucket/doscapsule.json 是 Scoop manifest，两者都把 dosbox-staging 声明为强制依赖，安装时自动带上。它们直接放在本仓库里，因此不需要额外的 tap/bucket 仓库：brew tap bytecapsule/doscapsule 与 scoop bucket add bytecapsule https://github.com/bytecapsule/doscapsule 都指向这个仓库。
