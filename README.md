@@ -5,6 +5,8 @@
 
 一个把 DOS 老游戏装进"胶囊"里的怀旧前端：扫描本地游戏目录，点开即玩。
 
+![DOS Capsule](docs/images/screenshot.jpg)
+
 ## 安装
 
 DOSBox Staging 是必需的模拟器。**下面的包管理器安装会自动带上它**，无需手动装。
