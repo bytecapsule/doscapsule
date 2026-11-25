@@ -18,11 +18,11 @@ class Doscapsule < Formula
   license "MIT"
 
   if Hardware::CPU.arm?
-    url "https://github.com/bytecapsule/doscapsule/releases/download/20261122-2/doscapsule-arm64-20261122-2.zip"
-    sha256 "20f2df1594267458d9b78f6b64511d9c4333ce8cf74849f64d9e4d58e88045bd"
+    url "https://github.com/bytecapsule/doscapsule/releases/download/20261125-3/doscapsule-macos-arm64-20261125-3.zip"
+    sha256 "d57ba134e377fa858c00ced9b9749dc26275491cfc470d888f53b0f0d147d993"
   else
-    url "https://github.com/bytecapsule/doscapsule/releases/download/20261122-2/doscapsule-x64-20261122-2.zip"
-    sha256 "b2539b5d3825801a2f98ab973ec5983da5bba7cf4185cf4c08b5646fbaa1edea"
+    url "https://github.com/bytecapsule/doscapsule/releases/download/20261125-3/doscapsule-macos-x64-20261125-3.zip"
+    sha256 "4310d604ce0cef0fb89ebc9d2f9418416e09c012b08854cde68af5dcb8b71324"
   end
 
   # Hard dependency: brew installs DOSBox Staging automatically if absent.
