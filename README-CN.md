@@ -41,10 +41,17 @@ scoop update doscapsule                    # Scoop
 
 如果之前装的是旧的 tap/bucket，需要一次性切到共享索引：
 
+macOS:
+
 ```bash
 brew untap bytecapsule/doscapsule 2>/dev/null || true
-brew tap bytecapsule/packages && brew trust bytecapsule/packages
+brew tap bytecapsule/packages
+brew trust bytecapsule/packages
+```
 
+Windows:
+
+```powershell
 scoop bucket rm bytecapsule 2>$null
 scoop bucket add bytecapsule https://github.com/bytecapsule/homebrew-packages
 ```

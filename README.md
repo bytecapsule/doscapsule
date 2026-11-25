@@ -42,10 +42,17 @@ scoop update doscapsule                    # Scoop
 
 Installed before the shared package index? Re-point once:
 
+macOS:
+
 ```bash
 brew untap bytecapsule/doscapsule 2>/dev/null || true
-brew tap bytecapsule/packages && brew trust bytecapsule/packages
+brew tap bytecapsule/packages
+brew trust bytecapsule/packages
+```
 
+Windows:
+
+```powershell
 scoop bucket rm bytecapsule 2>$null
 scoop bucket add bytecapsule https://github.com/bytecapsule/homebrew-packages
 ```
