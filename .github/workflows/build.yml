@@ -213,9 +213,19 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Mint package-index token
+        id: app-token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          client-id: ${{ vars.PACKAGING_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PACKAGING_APP_PRIVATE_KEY }}
+          owner: bytecapsule
+          repositories: homebrew-packages
+          permission-contents: write
+
       - name: Update package index
         env:
-          GH_TOKEN: ${{ secrets.PACKAGING_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           gh api --method POST \
             repos/bytecapsule/homebrew-packages/dispatches \

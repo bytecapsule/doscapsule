@@ -231,7 +231,9 @@ The index lives in a separate repository, `bytecapsule/homebrew-packages`:
 - `scripts/update-package.sh` — downloads the release zips, computes SHA-256
 - `.github/workflows/update-package.yml` — updates one product on dispatch
 
-The release workflow sends a `repository_dispatch` after publishing:
+The release workflow mints a short-lived installation token for a GitHub App
+(`actions/create-github-app-token`, Contents: write on the packages repo) and
+sends a `repository_dispatch` after publishing:
 
 ```bash
 gh api --method POST repos/bytecapsule/homebrew-packages/dispatches \
