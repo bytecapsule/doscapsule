@@ -169,7 +169,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: doscapsule-${{ matrix.label }}
-          path: doscapsule-${{ matrix.label }}-*.zip
+          path: out/doscapsule-${{ matrix.label }}-*.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -190,6 +190,12 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+
+      - name: Flatten artifacts
+        # upload-artifact may keep the out/ prefix depending on version; move
+        # any nested zip to dist/ so the release glob is stable.
+        run: |
+          find dist -mindepth 2 -name 'doscapsule-*.zip' -exec mv {} dist/ \;
 
       - name: List release files
         run: ls -la dist
