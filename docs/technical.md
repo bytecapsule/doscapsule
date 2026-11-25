@@ -33,9 +33,7 @@ doscapsule/
 │   ├── httpapi/           /api/*, embedded UI, Host/CSRF wrapper
 │   └── cli/               scan / list / search / run / serve
 ├── frontend/              SolidJS + Vite
-├── Formula/               Homebrew formula
-├── bucket/                Scoop manifest
-├── scripts/               zip.sh, update-packaging.sh, normalize_cover.py
+├── scripts/               zip.sh, normalize_cover.py
 ├── docs/                  this file + the integration docs
 ├── .github/workflows/     build.yml
 ├── out/                   local build output: binaries + zips (gitignored)
@@ -221,37 +219,34 @@ Release assets are named by platform:
 - `doscapsule-macos-x64-<tag>.zip`
 - `doscapsule-windows-x64-<tag>.zip`
 
-### Updating the package manifests after a release — do not skip this
+### Package index
 
 Homebrew and Scoop pin an **exact version and checksum**, so a new GitHub
-release changes nothing for package-manager users until the manifests are
-bumped too. A stale manifest makes `brew upgrade` answer "already installed and
-up-to-date" for a release that exists.
+release changes nothing for package-manager users until the index is updated.
+The index lives in a separate repository, `bytecapsule/homebrew-packages`:
+
+- `Formula/doscapsule.rb` — Homebrew formula
+- `bucket/doscapsule.json` — Scoop manifest
+- `products/doscapsule.env` — product repository + asset names
+- `scripts/update-package.sh` — downloads the release zips, computes SHA-256
+- `.github/workflows/update-package.yml` — updates one product on dispatch
+
+The release workflow sends a `repository_dispatch` after publishing:
 
 ```bash
-make manifest          # points Formula/ and bucket/ at the latest release
-git add Formula bucket && git commit -m "packaging: ..." && git push
+gh api --method POST repos/bytecapsule/homebrew-packages/dispatches \
+  -f event_type=release-published \
+  -f 'client_payload[product]=doscapsule' \
+  -f "client_payload[tag]=${TAG}"
 ```
 
-`make manifest-check` compares the manifest version against the latest release
-and exits non-zero when they differ, so a forgotten bump is detectable.
+The packages workflow then commits the new URL/hash to its own `main`. No
+manual manifest bump, and no binaries are duplicated: the formula and manifest
+point at this repository's release assets.
 
-Commit that bump with **`[skip ci]` in the message**. The manifests live in this
-repository, so the bump is a commit on `main`; if a push trigger is ever enabled,
-that commit would start a build which bumps the manifests again — a loop that
-also burns Actions minutes. Two independent guards cover it:
-
-1. `[skip ci]` in the bump commit, and
-2. a `paths-ignore: [Formula/**, bucket/**]` filter in the push trigger (already
-   written into the commented block in `build.yml`)
-
-The only way this bites is if the manifests move out of this repo into a
-separate tap/bucket repository, which is the conventional fix — worth it only
-once releases become automatic.
-
-The underlying script is `scripts/update-packaging.sh <tag>`: it downloads the
-three zips, computes SHA-256 and rewrites the tag and hashes. It rewrites the
-values in place, so it can be run for every release.
+Adding a new tool happens only in the index repository: add
+`Formula/<product>.rb`, `bucket/<product>.json`, and `products/<product>.env`,
+then dispatch `product=<product>` from that tool's release workflow.
 
 **On the user's side** the tap has to be refreshed before upgrading — `brew
 upgrade` alone reads the tap as it was last fetched:
@@ -259,25 +254,6 @@ upgrade` alone reads the tap as it was last fetched:
 ```bash
 brew update && brew upgrade doscapsule
 ```
-
-### Why there is no separate tap/bucket repository
-
-`Formula/` at the repo root makes this repository a Homebrew tap, and `bucket/`
-makes it a Scoop bucket, so no second repository is needed:
-
-```bash
-brew tap bytecapsule/doscapsule https://github.com/bytecapsule/doscapsule
-brew trust bytecapsule/doscapsule
-brew install bytecapsule/doscapsule/doscapsule
-```
-
-```powershell
-scoop bucket add bytecapsule https://github.com/bytecapsule/doscapsule
-scoop install doscapsule
-```
-
-Both declare `dosbox-staging` as a hard dependency, so installing pulls DOSBox
-in automatically.
 
 ---
 

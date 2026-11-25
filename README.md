@@ -17,14 +17,14 @@ DOSBox Staging is required. **The package managers below install it for you.**
 
 **macOS (Homebrew)**
 ```bash
-brew tap bytecapsule/doscapsule https://github.com/bytecapsule/doscapsule
-brew trust bytecapsule/doscapsule
-brew install bytecapsule/doscapsule/doscapsule
+brew tap bytecapsule/packages
+brew trust bytecapsule/packages
+brew install doscapsule
 ```
 
 **Windows 10/11 (Scoop)**
 ```powershell
-scoop bucket add bytecapsule https://github.com/bytecapsule/doscapsule
+scoop bucket add bytecapsule https://github.com/bytecapsule/homebrew-packages
 scoop install doscapsule
 ```
 
@@ -38,6 +38,16 @@ To upgrade later:
 ```bash
 brew update && brew upgrade doscapsule     # Homebrew
 scoop update doscapsule                    # Scoop
+```
+
+Installed before the shared package index? Re-point once:
+
+```bash
+brew untap bytecapsule/doscapsule 2>/dev/null || true
+brew tap bytecapsule/packages && brew trust bytecapsule/packages
+
+scoop bucket rm bytecapsule 2>$null
+scoop bucket add bytecapsule https://github.com/bytecapsule/homebrew-packages
 ```
 
 ## Getting started

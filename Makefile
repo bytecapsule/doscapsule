@@ -67,31 +67,3 @@ zip-all: zip-arm zip-x64 ## package both macOS arches
 
 clean: ## remove build artifacts (out/ + embedded frontend dist)
 	rm -rf $(OUT) $(DIST)
-
-# ── package-manager manifests ────────────────────────────────────────────────
-# Homebrew and Scoop pin an exact version and checksum, so every release needs
-# the manifests bumped or 'brew upgrade' keeps reporting the old version as
-# current. These two targets keep that from being something to remember.
-
-LATEST_TAG = $(shell gh release view --repo bytecapsule/doscapsule --json tagName --jq .tagName 2>/dev/null)
-MANIFEST_TAG = $(shell grep -oE 'doscapsule-(macos-)?arm64-[0-9]{8}-[0-9]+' Formula/doscapsule.rb 2>/dev/null | head -1 | sed -E 's/doscapsule-(macos-)?arm64-//')
-
-manifest: ## point Formula/ and bucket/ at the latest GitHub release
-	@if [ -z "$(LATEST_TAG)" ]; then echo "error: cannot read the latest release (is gh authenticated?)" >&2; exit 1; fi
-	@echo "latest release: $(LATEST_TAG)"
-	@bash scripts/update-packaging.sh "$(LATEST_TAG)"
-	@echo
-	@echo "Now commit and push (note [skip ci]: a manifest bump must never trigger a build,"
-	@echo "or an auto-build-on-push setup would bump again and loop forever):"
-	@echo "  git add Formula bucket"
-	@echo "  git commit -m \"packaging: bump to $(LATEST_TAG) [skip ci]\""
-	@echo "  git push"
-
-manifest-check: ## warn when the manifests lag behind the latest release
-	@echo "manifests: $(MANIFEST_TAG)"
-	@echo "latest:    $(LATEST_TAG)"
-	@if [ "$(MANIFEST_TAG)" != "$(LATEST_TAG)" ]; then \
-	  echo "STALE: run 'make manifest' and push, or package managers keep serving $(MANIFEST_TAG)"; \
-	  exit 1; \
-	fi
-	@echo "up to date"

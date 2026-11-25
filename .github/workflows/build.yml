@@ -12,31 +12,18 @@ name: build
 # Local verification lives in the Makefile (make test / make zip-all), so this
 # workflow does not need to run on every push or pull request.
 #
-# If a push trigger IS ever enabled it must ignore the package-manager
-# manifests. Bumping Formula/ or bucket/ after a release creates a commit, and
-# a build triggered by that commit would bump them again - an endless loop that
-# also burns Actions minutes. The commented block under `on:` already carries
-# the paths filter, so enabling it cannot reintroduce the loop.
-#
 # Zips are FLAT (binary at the archive root) so Homebrew's `bin.install` and
 # Scoop's `bin` resolve without a wrapper directory.
 #
-# DOSBox is NOT bundled: Formula/doscapsule.rb and bucket/doscapsule.json both
-# declare dosbox-staging as a hard dependency, so a package-manager install
-# pulls it in automatically.
+# DOSBox is NOT bundled: the Homebrew formula and Scoop manifest live in
+# bytecapsule/homebrew-packages and declare dosbox-staging as a hard
+# dependency, so a package-manager install pulls it in automatically.
+#
+# After publishing, the release job dispatches to that package index; no
+# formula or manifest is stored in this repository.
 #
 # Version format: <UTC date>-<serial>, e.g. 20261122-1.
 
-#
-# To verify every change landing on main, uncomment - note paths-ignore, it is
-# what keeps a manifest bump from triggering the next build:
-#
-#   push:
-#     branches: [main]
-#     paths-ignore:
-#       - 'Formula/**'
-#       - 'bucket/**'
-#
 on:
   workflow_dispatch:
     inputs:
@@ -219,9 +206,19 @@ jobs:
             - Windows: `scoop install dosbox-staging`
 
             Or install the app with its DOSBox dependency in one step:
-            - macOS: `brew tap bytecapsule/doscapsule && brew install doscapsule`
-            - Windows: `scoop bucket add bytecapsule https://github.com/bytecapsule/doscapsule` then `scoop install doscapsule`
+            - macOS: `brew tap bytecapsule/packages && brew install doscapsule`
+            - Windows: `scoop bucket add bytecapsule https://github.com/bytecapsule/homebrew-packages` then `scoop install doscapsule`
           files: dist/doscapsule-*.zip
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
+
+      - name: Update package index
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGING_TOKEN }}
+        run: |
+          gh api --method POST \
+            repos/bytecapsule/homebrew-packages/dispatches \
+            -f event_type=release-published \
+            -f 'client_payload[product]=doscapsule' \
+            -f "client_payload[tag]=${{ needs.version.outputs.tag }}"
