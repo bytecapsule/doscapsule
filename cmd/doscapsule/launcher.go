@@ -1,8 +1,8 @@
 package main
 
 // DOSBox resolution, per-game conf handling, launch / stop / running tracking.
-// Same semantics as the Tauri version: a per-game @dosbox.conf is the single
-// source of truth (DOSBox cwd = game dir, relative mounts work); otherwise a
+// A per-game @dosbox.conf is the single source of truth (DOSBox cwd = game
+// dir, relative mounts work); otherwise a
 // built-in conf is generated into the app config dir.
 
 import (

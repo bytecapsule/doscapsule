@@ -1,5 +1,7 @@
-// Browser shim with the SAME exported names as the Tauri layer: LocalLibrary
-// compiles unchanged. Every call is plain HTTP against the Go process.
+// The single backend client for the UI. Every call is a plain HTTP request
+// against the embedded Go process (cmd/doscapsule/main.go), which serves the
+// same JSON API. The local folder chooser and file->URL conversion go through
+// the Go side too, so the frontend never talks to a native runtime.
 
 export interface LocalGame {
   id: string;

@@ -19,11 +19,22 @@ function storedLang(): Lang {
   return "en";
 }
 
-const [lang, setLangSignal] = createSignal<Lang>(storedLang());
+function applyDocumentLang(l: Lang) {
+  // index.html hard-codes lang="en"; keep the attribute truthful after a
+  // switch so screen readers and CJK font fallback pick the right language.
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = l === "zh" ? "zh-CN" : "en";
+  }
+}
+
+const initialLang = storedLang();
+const [lang, setLangSignal] = createSignal<Lang>(initialLang);
+applyDocumentLang(initialLang);
 export { lang };
 
 export function setLang(l: Lang) {
   setLangSignal(l);
+  applyDocumentLang(l);
   try { localStorage.setItem(STORAGE_KEY, l); } catch { /* ignore */ }
 }
 
@@ -42,6 +53,8 @@ export interface Dict {
   statusScanning: string;
   statusCount: (n: number) => string;
   statusNone: string;
+  unknownYear: string;
+  otherGenre: string;
   btnSpec: string;
   btnHelp: string;
   btnScan: string;
@@ -98,11 +111,15 @@ const ZH: Dict = {
   statusScanning: "正在扫描…",
   statusCount: (n) => `当前扫描到 ${n} 个游戏`,
   statusNone: "尚未扫描游戏文件夹",
+  unknownYear: "未知",
+  otherGenre: "其他",
   btnSpec: "接入规范",
   btnHelp: "DOSBox 操作指南",
   btnScan: "扫描游戏文件夹",
-  btnLang: "中文",
-  langTitle: "Switch to English",
+  // The toggle advertises the language it switches TO, not the active one:
+  // a button labelled with the current language reads like a no-op.
+  btnLang: "English",
+  langTitle: "切换到英文",
 
   searchPlaceholder: "搜索游戏…",
   allGenres: "全部类型",
@@ -323,11 +340,14 @@ const EN: Dict = {
   statusScanning: "Scanning…",
   statusCount: (n) => `${n} game${n === 1 ? "" : "s"} scanned`,
   statusNone: "No games folder scanned",
+  unknownYear: "Unknown",
+  otherGenre: "Other",
   btnSpec: "Game Integration",
   btnHelp: "DOSBox Guide",
   btnScan: "Scan Games Folder",
-  btnLang: "English",
-  langTitle: "切换到中文",
+  // See the ZH dictionary: the label names the target language.
+  btnLang: "中文",
+  langTitle: "Switch to Chinese",
 
   searchPlaceholder: "Search games…",
   allGenres: "All genres",

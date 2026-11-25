@@ -409,7 +409,6 @@ func handleOpenDir(w http.ResponseWriter, r *http.Request) {
 }
 
 // handlePickFolder opens the OS-native folder chooser and returns the path.
-// This keeps the browser UI on parity with the Tauri directory dialog.
 func handlePickFolder(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Title string `json:"title"`
@@ -433,7 +432,7 @@ func handlePickFolder(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := cmd.Output()
 	if err != nil {
-		// Cancelled (or no chooser available): null, like the Tauri dialog.
+		// Cancelled (or no chooser available): null.
 		writeJSON(w, map[string]any{"path": nil})
 		return
 	}
@@ -553,13 +552,29 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	url := fmt.Sprintf("http://127.0.0.1:%d", ln.Addr().(*net.TCPAddr).Port)
+	// The listener's real address (127.0.0.1:<port>, after any fallback) is the
+	// only Host we accept. DNS rebinding or a wrong host is refused outright.
+	// CrossOriginProtection rejects non-safe cross-site browser requests (CSRF):
+	// a malicious page can reach 127.0.0.1 but must not trigger launches, writes
+	// or other state changes. Safe GETs pass, and curl/CLI (no Origin/Sec-Fetch)
+	// stays usable. Localhost binding alone is not security.
+	host := ln.Addr().String()
+	csrf := http.NewCrossOriginProtection().Handler(mux)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Host != host {
+			http.Error(w, "invalid Host", http.StatusForbidden)
+			return
+		}
+		csrf.ServeHTTP(w, r)
+	})
+
+	url := fmt.Sprintf("http://%s", host)
 	log.Printf("DOS Capsule running at %s", url)
 
 	if *openBrowserFlag {
 		go openBrowser(url)
 	}
-	log.Fatal(http.Serve(ln, mux))
+	log.Fatal(http.Serve(ln, handler))
 }
 
 var _ = errors.New // keep import set stable for future use

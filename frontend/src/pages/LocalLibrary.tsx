@@ -1,5 +1,5 @@
 import { createSignal, Show, For, onMount, onCleanup } from "solid-js";
-import { open, convertFileSrc } from "../api/tauri";
+import { open, convertFileSrc } from "../api/client";
 import {
   localSelectRoot,
   localListGames,
@@ -13,7 +13,7 @@ import {
   localSaveConf,
   localOpenGameDir,
   type LocalGame,
-} from "../api/tauri";
+} from "../api/client";
 import { Button } from "../components/Button";
 import {
   BookOpen, FolderOpen, Joystick, Keyboard, Languages, Play, Search, Settings, Square, Star,
@@ -24,6 +24,11 @@ import { toggleLang, tr } from "../i18n";
 function assetSrc(path: string): string {
   return convertFileSrc(path);
 }
+
+// Stable keys for synthetic sections. They must not depend on the active
+// language, otherwise switching language would re-group the list.
+const UNKNOWN_YEAR_KEY = "__unknown_year__";
+const OTHER_GENRE_KEY = "__other_genre__";
 
 /** One grid card. Hovering cycles through the game's screenshots (4:3 stills,
  *  exactly how DOSBox aspect-corrects 320x200); leaving returns to the cover.
@@ -68,7 +73,7 @@ function LocalCard(props: {
           <Show when={props.running}>
             <span
               class="run-badge"
-              title="Stop the emulator"
+              title={tr().stopEmu}
               onClick={(e) => { e.stopPropagation(); props.onStop(); }}
             ><Square class="meta-ico" />{tr().running}</span>
           </Show>
@@ -119,9 +124,11 @@ export function LocalLibrary() {
     const index = new Map<string, number>();
     for (const g of list) {
       const key = sortBy() === "year"
-        ? (g.year != null ? String(g.year) : "未知")
-        : (g.genre || "其他");
-      const label = key;
+        ? (g.year != null ? String(g.year) : UNKNOWN_YEAR_KEY)
+        : (g.genre || OTHER_GENRE_KEY);
+      const label = key === UNKNOWN_YEAR_KEY ? tr().unknownYear
+        : key === OTHER_GENRE_KEY ? tr().otherGenre
+        : key;
       let i = index.get(key);
       if (i === undefined) {
         i = sections.length;
@@ -130,15 +137,19 @@ export function LocalLibrary() {
       }
       sections[i].games.push(g);
     }
-    // year: newest first; genre: keep backend's alphabetical order (already A-Z).
+    // year: newest first, undated last; genre: alphabetical, "other" last.
     if (sortBy() === "year") {
       sections.sort((a, b) => {
-        const ay = a.key === "未知" ? -1 : parseInt(a.key, 10);
-        const by = b.key === "未知" ? -1 : parseInt(b.key, 10);
+        const ay = a.key === UNKNOWN_YEAR_KEY ? -1 : parseInt(a.key, 10);
+        const by = b.key === UNKNOWN_YEAR_KEY ? -1 : parseInt(b.key, 10);
         return by - ay;
       });
     } else {
-      sections.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+      sections.sort((a, b) => {
+        if (a.key === OTHER_GENRE_KEY) { return 1; }
+        if (b.key === OTHER_GENRE_KEY) { return -1; }
+        return a.label < b.label ? -1 : a.label > b.label ? 1 : 0;
+      });
     }
     return sections;
   };
@@ -284,7 +295,7 @@ export function LocalLibrary() {
   // Cancelling the picker changes nothing; a failed scan keeps the current
   // library on screen instead of blanking it.
   const scanFolder = async () => {
-    const selected = await open({ title: "Scan a games folder", directory: true });
+    const selected = await open({ title: tr().btnScan, directory: true });
     if (!selected) return;
     setError(null);
     setLoading(true);
@@ -339,9 +350,27 @@ export function LocalLibrary() {
         </span>
         <div class="nav-right">
           <button class="nav-btn" onClick={() => setShowSpec(true)}><BookOpen class="ico" />{tr().btnSpec}</button>
-          <button class="nav-btn" title="DOSBox hotkeys / help" onClick={() => setShowHelp(true)}><Keyboard class="ico" />{tr().btnHelp}</button>
+          <button class="nav-btn" title={tr().helpTitle} onClick={() => setShowHelp(true)}><Keyboard class="ico" />{tr().btnHelp}</button>
           <button class="nav-btn nav-btn-strong" onClick={() => void scanFolder()}><FolderOpen class="ico" />{tr().btnScan}</button>
-          <button class="nav-btn" title={tr().langTitle} onClick={toggleLang}><Languages class="ico" />{tr().btnLang}</button>
+          <a
+            class="nav-btn"
+            href="https://github.com/bytecapsule/doscapsule"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="GitHub"
+            aria-label="GitHub repository"
+          ><svg
+            class="ico"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          ><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3Z"/></svg></a>
+          <button
+            class="nav-btn"
+            title={tr().langTitle}
+            aria-label={tr().langTitle}
+            onClick={toggleLang}
+          ><Languages class="ico" />{tr().btnLang}</button>
         </div>
       </header>
 
@@ -376,7 +405,7 @@ export function LocalLibrary() {
                 <option value="genre">{tr().sortGenre}</option>
                 <option value="recent">{tr().sortRecent}</option>
               </select>
-              <label class="tb-chip" title="Show favorites only">
+              <label class="tb-chip" title={tr().favoritesOnly}>
                 <input
                   type="checkbox"
                   checked={favOnly()}

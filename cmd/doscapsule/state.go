@@ -1,7 +1,7 @@
 package main
 
 // Persisted user state (state.json): selected games root, favorites and
-// last-played timestamps — the same semantics as the Tauri version.
+// last-played timestamps.
 
 import (
 	"encoding/json"
@@ -46,12 +46,23 @@ func legacyStateDir() string {
 
 // stateDir returns the folder holding state.json and launch/defaults.conf.
 //
-// The whole point is portability: when the DOSBox bundle sits beside the
-// executable (binaries/dosbox/), state is kept in <exe>/data, so copying the
-// project folder to another machine carries the library, the settings and the
-// emulator in one piece. Without that bundle (running via `go run`, or an
+// DOSCAPSULE_DATA_DIR wins over everything: it lets a test or a second
+// instance keep its own library instead of overwriting the real one. A dev
+// build that scans a scratch folder must not clobber the games root, favorites
+// and play history the user actually cares about.
+//
+// Otherwise the whole point is portability: when the DOSBox bundle sits beside
+// the executable (binaries/dosbox/), state is kept in <exe>/data, so copying
+// the project folder to another machine carries the library, the settings and
+// the emulator in one piece. Without that bundle (running via `go run`, or an
 // install that only has the binary) it falls back to the OS config dir.
 func stateDir() (string, error) {
+	if override := os.Getenv("DOSCAPSULE_DATA_DIR"); override != "" {
+		if err := os.MkdirAll(override, 0o755); err != nil {
+			return "", err
+		}
+		return override, nil
+	}
 	if exe, err := os.Executable(); err == nil {
 		base := filepath.Dir(exe)
 		portable := filepath.Join(base, "data")

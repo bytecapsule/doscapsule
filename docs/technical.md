@@ -119,8 +119,7 @@ escapes.
 | `POST /api/pick_folder` | System folder picker |
 | `GET /media?path=` | Covers / screenshots |
 
-The frontend calls these through the fetch shim in
-`frontend/src/api/tauri.ts` (the filename is a leftover).
+The frontend calls these through the HTTP client in `frontend/src/api/client.ts`.
 
 ---
 
@@ -236,6 +235,24 @@ in automatically.
 ---
 
 ## 7. Security and contributions
+
+### Runtime security
+The UI is served from `127.0.0.1`, but that only limits the network entry — a
+malicious web page can still reach the loopback address. So every request is
+wrapped in two layers (see `main()`):
+
+- **Host check**: only the exact listener address (e.g. `127.0.0.1:8420`, or the
+  random port after a fallback) is accepted as `Host`; anything else returns
+  `403`. This blocks DNS-rebinding.
+- **CSRF**: `http.NewCrossOriginProtection().Handler(mux)` rejects non-safe
+  cross-site browser requests, so an external page cannot trigger a launch,
+  write a config, toggle favourites or stop a game. Safe `GET`/`HEAD` and
+  CLI/curl calls (which send no `Origin`/`Sec-Fetch-Site`) still pass.
+
+Path safety is handled per-route: game ids and `/media` paths are validated
+against the games root, rejecting `../` escapes. No session/credentials are
+used — the app cannot read arbitrary files, so authentication is intentionally
+out of scope.
 
 - Every GitHub Action is **pinned to a commit SHA**, so a re-pointed tag cannot
   inject code
