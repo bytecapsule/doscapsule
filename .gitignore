@@ -92,6 +92,8 @@ cmd/doscapsule/dist/
 *.zip
 *.tar.gz
 *.tgz
+# Local build output dir (binaries + zips). Kept out of the tree entirely.
+/out/
 
 # ── Project runtime state (portable mode) ────────────────────────────────────
 /data/

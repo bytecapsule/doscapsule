@@ -8,6 +8,10 @@ BINARY   := doscapsule
 SRC      := ./cmd/doscapsule
 FRONTEND := frontend
 DIST     := $(SRC)/dist
+# All locally-built binaries and zips go into out/ (gitignored), keeping the
+# repo root clean. cmd/doscapsule/dist stays put — it is the go:embed source.
+# (Named out/, not build/, so it never collides with the `build:` target.)
+OUT      := out
 GO       ?= go
 PNPM     ?= pnpm
 
@@ -25,14 +29,19 @@ help: ## show this help
 dist: ## build the frontend (output to cmd/doscapsule/dist)
 	cd $(FRONTEND) && $(PNPM) install && $(PNPM) build
 
-build: ## build for the current platform
-	cd $(SRC) && $(GO) build -ldflags "$(LDFLAGS)" -o ../../$(BINARY) .
+# Ensure the build output dir exists for the targets below.
+# (mkdir is not .PHONY, so it only runs when build/ is missing.)
+$(OUT):
+	mkdir -p $(OUT)
 
-build-arm: ## build macOS arm64
-	cd $(SRC) && GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS)" -o ../../$(BINARY)-arm64 .
+build: | $(OUT) ## build for the current platform
+	cd $(SRC) && $(GO) build -ldflags "$(LDFLAGS)" -o ../../$(OUT)/$(BINARY) .
 
-build-x64: ## build macOS amd64
-	cd $(SRC) && GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o ../../$(BINARY)-amd64 .
+build-arm: | $(OUT) ## build macOS arm64
+	cd $(SRC) && GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS)" -o ../../$(OUT)/$(BINARY)-arm64 .
+
+build-x64: | $(OUT) ## build macOS amd64
+	cd $(SRC) && GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o ../../$(OUT)/$(BINARY)-amd64 .
 
 build-all: dist build-arm build-x64 ## frontend + both macOS arches
 
@@ -40,24 +49,24 @@ test: ## run backend tests
 	$(GO) test ./...
 
 run: dist build ## build then run (opens browser)
-	./$(BINARY)
+	$(OUT)/$(BINARY)
 
 debug: ## run with local debugging (no embed optimization)
 	cd $(SRC) && $(GO) run -gcflags "all=-N -l" . -port=8420
 
 zip: dist build ## package the current-platform binary into a zip (no DOSBox)
-	@scripts/zip.sh $(BINARY)
+	@scripts/zip.sh $(OUT)/$(BINARY)
 
 zip-arm: dist build-arm ## package macOS arm64
-	@scripts/zip.sh $(BINARY)-arm64 arm64
+	@scripts/zip.sh $(OUT)/$(BINARY)-arm64 arm64
 
 zip-x64: dist build-x64 ## package macOS amd64
-	@scripts/zip.sh $(BINARY)-amd64 x64
+	@scripts/zip.sh $(OUT)/$(BINARY)-amd64 x64
 
 zip-all: zip-arm zip-x64 ## package both macOS arches
 
-clean: ## remove build artifacts
-	rm -rf $(DIST) $(BINARY) $(BINARY)-arm64 $(BINARY)-amd64 *.zip
+clean: ## remove build artifacts (build/ + embedded frontend dist)
+	rm -rf $(OUT) $(DIST)
 
 # ── package-manager manifests ────────────────────────────────────────────────
 # Homebrew and Scoop pin an exact version and checksum, so every release needs

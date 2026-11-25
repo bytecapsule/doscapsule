@@ -131,11 +131,11 @@ SolidJS / TypeScript / Vite.
 
 ```bash
 make dist      # build the frontend into cmd/doscapsule/dist
-make build     # build the binary for this platform
+make build     # build the binary for this platform (-> out/)
 make test      # run the tests
 make run       # build and run
-make zip-arm   # package for macOS arm64
-make zip-x64   # package for macOS x64
+make zip-arm   # package for macOS arm64 (-> out/*.zip)
+make zip-x64   # package for macOS x64 (-> out/*.zip)
 make help      # list every target
 ```
 

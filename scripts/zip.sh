@@ -19,6 +19,7 @@ VERSION_ARG="${3:-}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+mkdir -p "$ROOT/out"
 
 if [[ ! -f "$BIN" ]]; then
   echo "error: binary not found: $BIN (run 'make build' first)" >&2
@@ -59,5 +60,5 @@ Once installed, the launcher finds dosbox-staging automatically on PATH.
 Point it at a games folder and start playing.
 EOT
 
-( cd "$STAGE" && zip -rq "$ROOT/${NAME}.zip" . -x '.*' )
-echo "packaged: $ROOT/${NAME}.zip"
+( cd "$STAGE" && zip -rq "$ROOT/out/${NAME}.zip" . -x '.*' )
+echo "packaged: $ROOT/out/${NAME}.zip"

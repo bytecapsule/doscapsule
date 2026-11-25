@@ -124,11 +124,11 @@ DOS 游戏一旦捕获鼠标，光标就出不来，这是 DOSBox 的行为，�
 
 ```bash
 make dist      # 构建前端（输出到 cmd/doscapsule/dist）
-make build     # 构建当前平台二进制
+make build     # 构建当前平台二进制（输出到 out/）
 make test      # 跑测试
 make run       # 构建并运行
-make zip-arm   # 打 macOS arm64 包
-make zip-x64   # 打 macOS x64 包
+make zip-arm   # 打 macOS arm64 包（输出到 out/*.zip）
+make zip-x64   # 打 macOS x64 包（输出到 out/*.zip）
 make help      # 查看全部目标
 ```
 

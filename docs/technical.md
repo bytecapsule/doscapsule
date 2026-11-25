@@ -38,6 +38,7 @@ doscapsule/
 ├── scripts/               zip.sh, update-packaging.sh, normalize_cover.py
 ├── docs/                  this file + the integration docs
 ├── .github/workflows/     build.yml
+├── out/                   local build output: binaries + zips (gitignored)
 └── Makefile
 ```
 
@@ -129,22 +130,23 @@ The Makefile is the single entry point and works on every platform:
 
 ```bash
 make dist      # frontend only, into cmd/doscapsule/dist
-make build     # binary for the current platform
-make build-arm # cross-compile macOS arm64
-make build-x64 # cross-compile macOS x64
+make build     # binary for the current platform (-> out/)
+make build-arm # cross-compile macOS arm64 (-> out/)
+make build-x64 # cross-compile macOS x64 (-> out/)
 make test      # tests
 make run       # build and run
-make zip-arm   # package for arm64
-make zip-x64   # package for x64
-make clean     # remove artefacts
+make zip-arm   # package for arm64 (-> out/*.zip)
+make zip-x64   # package for x64 (-> out/*.zip)
+make clean     # remove build/out + dist
 make help      # list targets
 ```
 
-By hand:
+All locally-built binaries and zips land in `out/` (gitignored), keeping the
+repo root clean. By hand:
 
 ```bash
 cd frontend && pnpm install && pnpm build && cd ..
-go build -o doscapsule ./cmd/doscapsule
+mkdir -p out && go build -o out/doscapsule ./cmd/doscapsule
 ```
 
 Requires Go 1.27+, Node.js 22+, pnpm 12+.
