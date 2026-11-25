@@ -99,11 +99,11 @@ jobs:
         include:
           - goos: darwin
             goarch: arm64
-            label: arm64
+            label: macos-arm64
             ext: ""
           - goos: darwin
             goarch: amd64
-            label: x64
+            label: macos-x64
             ext: ""
           - goos: windows
             goarch: amd64
@@ -210,8 +210,8 @@ jobs:
 
             | Platform | File |
             |---|---|
-            | macOS Apple Silicon | `doscapsule-arm64-${{ needs.version.outputs.tag }}.zip` |
-            | macOS Intel | `doscapsule-x64-${{ needs.version.outputs.tag }}.zip` |
+            | macOS Apple Silicon | `doscapsule-macos-arm64-${{ needs.version.outputs.tag }}.zip` |
+            | macOS Intel | `doscapsule-macos-x64-${{ needs.version.outputs.tag }}.zip` |
             | Windows x64 | `doscapsule-windows-x64-${{ needs.version.outputs.tag }}.zip` |
 
             DOSBox is **not** bundled. Install it first:

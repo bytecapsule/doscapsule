@@ -215,6 +215,12 @@ do not collide and it resets daily.
 what makes Homebrew's `bin.install "doscapsule"` and Scoop's
 `"bin": "doscapsule.exe"` work — both resolve relative to the extraction root.
 
+Release assets are named by platform:
+
+- `doscapsule-macos-arm64-<tag>.zip`
+- `doscapsule-macos-x64-<tag>.zip`
+- `doscapsule-windows-x64-<tag>.zip`
+
 ### Updating the package manifests after a release — do not skip this
 
 Homebrew and Scoop pin an **exact version and checksum**, so a new GitHub

@@ -27,11 +27,11 @@ fetch_sha() { # <file-name> -> prints sha256
 }
 
 echo "Resolving ${TAG}…"
-SHA_ARM="$(fetch_sha "doscapsule-arm64-${TAG}.zip")"
-SHA_X64="$(fetch_sha "doscapsule-x64-${TAG}.zip")"
+SHA_ARM="$(fetch_sha "doscapsule-macos-arm64-${TAG}.zip")"
+SHA_X64="$(fetch_sha "doscapsule-macos-x64-${TAG}.zip")"
 SHA_WIN="$(fetch_sha "doscapsule-windows-x64-${TAG}.zip")"
-echo "  arm64 : ${SHA_ARM}"
-echo "  x64   : ${SHA_X64}"
+echo "  macos-arm64 : ${SHA_ARM}"
+echo "  macos-x64   : ${SHA_X64}"
 echo "  win64 : ${SHA_WIN}"
 
 # Homebrew formula: replace <TAG> and the two sha256 placeholders.
@@ -40,14 +40,13 @@ python3 - "$FORMULA" "$TAG" "$SHA_ARM" "$SHA_X64" <<'PYEOF'
 import re, sys
 path, tag, sha_arm, sha_x64 = sys.argv[1:5]
 s = open(path).read()
-# Rewrite the tag inside both download URLs. Matching the URL rather than a
-# placeholder keeps this script re-runnable: after the first release the tag is
-# a real value, not "<TAG>".
-s = re.sub(r'(releases/download/)[^/]+(/doscapsule-arm64-)[^/.]+(\.zip)',
-           lambda m: m.group(1) + tag + m.group(2) + tag + m.group(3), s)
-s = re.sub(r'(releases/download/)[^/]+(/doscapsule-x64-)[^/.]+(\.zip)',
-           lambda m: m.group(1) + tag + m.group(2) + tag + m.group(3), s)
-# Then the two sha256 values, in file order: arm64 first, x64 second.
+# Rewrite both the tag and the file name, so a manifest still carrying the
+# old arm64/x64 names migrates to macos-arm64/macos-x64 on the next release.
+s = re.sub(r'(releases/download/)[^/]+/doscapsule-(?:macos-)?arm64-[^/"]+?\.zip',
+           lambda m: f'{m.group(1)}{tag}/doscapsule-macos-arm64-{tag}.zip', s)
+s = re.sub(r'(releases/download/)[^/]+/doscapsule-(?:macos-)?x64-[^/"]+?\.zip',
+           lambda m: f'{m.group(1)}{tag}/doscapsule-macos-x64-{tag}.zip', s)
+# Then the two sha256 values, in file order: macos-arm64 first, macos-x64 second.
 shas = iter([sha_arm, sha_x64])
 def sub_sha(m):
     try:

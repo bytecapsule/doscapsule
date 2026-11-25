@@ -1,6 +1,6 @@
 # Homebrew formula for doscapsule.
 #
-# Two zips are published per release - arm64 (Apple Silicon) and x64 (Intel) -
+# Two zips are published per release - macos-arm64 (Apple Silicon) and macos-x64 (Intel) -
 # and the formula picks by host CPU, so both are native (no Rosetta).
 #
 # `dosbox-staging` is a HARD dependency: brew installs it automatically when

@@ -58,10 +58,10 @@ zip: dist build ## package the current-platform binary into a zip (no DOSBox)
 	@scripts/zip.sh $(OUT)/$(BINARY)
 
 zip-arm: dist build-arm ## package macOS arm64
-	@scripts/zip.sh $(OUT)/$(BINARY)-arm64 arm64
+	@scripts/zip.sh $(OUT)/$(BINARY)-arm64 macos-arm64
 
 zip-x64: dist build-x64 ## package macOS amd64
-	@scripts/zip.sh $(OUT)/$(BINARY)-amd64 x64
+	@scripts/zip.sh $(OUT)/$(BINARY)-amd64 macos-x64
 
 zip-all: zip-arm zip-x64 ## package both macOS arches
 
@@ -74,7 +74,7 @@ clean: ## remove build artifacts (out/ + embedded frontend dist)
 # current. These two targets keep that from being something to remember.
 
 LATEST_TAG = $(shell gh release view --repo bytecapsule/doscapsule --json tagName --jq .tagName 2>/dev/null)
-MANIFEST_TAG = $(shell grep -oE 'doscapsule-arm64-[0-9]{8}-[0-9]+' Formula/doscapsule.rb 2>/dev/null | head -1 | sed 's/doscapsule-arm64-//')
+MANIFEST_TAG = $(shell grep -oE 'doscapsule-(macos-)?arm64-[0-9]{8}-[0-9]+' Formula/doscapsule.rb 2>/dev/null | head -1 | sed -E 's/doscapsule-(macos-)?arm64-//')
 
 manifest: ## point Formula/ and bucket/ at the latest GitHub release
 	@if [ -z "$(LATEST_TAG)" ]; then echo "error: cannot read the latest release (is gh authenticated?)" >&2; exit 1; fi
