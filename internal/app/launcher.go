@@ -1,4 +1,4 @@
-package main
+package app
 
 // DOSBox resolution, per-game conf handling, launch / stop / running tracking.
 // A per-game @dosbox.conf is the single source of truth (DOSBox cwd = game
@@ -181,7 +181,11 @@ func writeDefaultsConf(dir string) (string, error) {
 	return p, nil
 }
 
-func (l *Launcher) Launch(root, id string) (string, *exec.Cmd, error) {
+// Start spawns DOSBox for the game and returns a handle to it. The caller
+// decides how to wait: the HTTP server calls Track (background), the CLI calls
+// Wait (foreground). Registration happens inside launchMu so a second
+// concurrent start for the same id sees it as busy.
+func (l *Launcher) Start(root, id string) (*Process, error) {
 	// One launch at a time: a second click (or a rapid double-click) must not
 	// start another emulator for the same game.
 	l.launchMu.Lock()
@@ -190,11 +194,11 @@ func (l *Launcher) Launch(root, id string) (string, *exec.Cmd, error) {
 	_, busy := l.running[id]
 	l.mu.Unlock()
 	if busy {
-		return "", nil, ErrAlreadyRunning
+		return nil, ErrAlreadyRunning
 	}
 	dir, err := resolveGameDir(root, id)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	m := loadManifest(dir)
 
@@ -213,7 +217,7 @@ func (l *Launcher) Launch(root, id string) (string, *exec.Cmd, error) {
 	}
 	confDir, err := launchConfDir()
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	if confArg == "" {
 		// Built-in conf: absolute mount, cwd = games root.
@@ -230,14 +234,14 @@ func (l *Launcher) Launch(root, id string) (string, *exec.Cmd, error) {
 		autoexec := fmt.Sprintf("@echo off\nmount c \"%s\"\nc:\n%s\nexit\n", gameDirFwd, command)
 		confPath := filepath.Join(confDir, "local-"+sanitizeID(id)+".conf")
 		if err := os.WriteFile(confPath, []byte(buildConf(autoexec, fullscreen, cycles)), 0o644); err != nil {
-			return "", nil, err
+			return nil, err
 		}
 		confArg = confPath
 	}
 
 	defaults, err := writeDefaultsConf(confDir)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	dosbox := resolveDosbox()
 	// Order matters: defaults first, the game's conf last so it can override.
@@ -262,36 +266,67 @@ func (l *Launcher) Launch(root, id string) (string, *exec.Cmd, error) {
 		}
 	}
 	if err := cmd.Start(); err != nil {
-		return "", nil, fmt.Errorf("failed to start DOSBox %s: %v", dosbox, err)
+		return nil, fmt.Errorf("failed to start DOSBox %s: %v", dosbox, err)
 	}
+	title := id
+	if m.Title != nil && *m.Title != "" {
+		title = *m.Title
+	}
+	p := &Process{ID: id, Title: title, cmd: cmd, l: l}
 	// Register now (inside launchMu) so a concurrent request sees it as busy
 	// before it can reach its own check.
 	l.mu.Lock()
 	l.running[id] = cmd
 	l.mu.Unlock()
-	title := id
-	if m.Title != nil {
-		title = *m.Title
-	}
-	return fmt.Sprintf("Launched %s", title), cmd, nil
+	return p, nil
 }
 
-func (l *Launcher) Track(id string, cmd *exec.Cmd) {
-	l.mu.Lock()
-	l.running[id] = cmd
-	l.mu.Unlock()
-	// Reap the child. Without Wait() the exited process stays a zombie, and a
-	// zombie still answers kill(pid, 0) — the badge used to survive the window
-	// being closed. Wait returns the moment DOSBox exits, and that is when the
-	// id leaves the running map.
+// Process is a running emulator. It carries just enough for an entry point to
+// wait for it (CLI foreground) or leave it running (HTTP background).
+type Process struct {
+	ID    string
+	Title string
+	cmd   *exec.Cmd
+	l     *Launcher
+}
+
+func (p *Process) Pid() int {
+	if p.cmd.Process == nil {
+		return 0
+	}
+	return p.cmd.Process.Pid
+}
+
+func (p *Process) Kill() error {
+	if p.cmd.Process == nil {
+		return errors.New("not running")
+	}
+	return p.cmd.Process.Kill()
+}
+
+// Wait blocks until the emulator exits, then forgets it. Use this from a
+// foreground entry point; do not combine it with Track.
+func (p *Process) Wait() error {
+	err := p.cmd.Wait()
+	p.l.forget(p.ID, p.cmd)
+	return err
+}
+
+// Track reaps the child in the background and removes it from the running map
+// when it exits. Use this from a long-lived server; do not combine it with Wait.
+func (l *Launcher) Track(p *Process) {
 	go func() {
-		_ = cmd.Wait()
-		l.mu.Lock()
-		if cur, ok := l.running[id]; ok && cur == cmd {
-			delete(l.running, id)
-		}
-		l.mu.Unlock()
+		_ = p.cmd.Wait()
+		l.forget(p.ID, p.cmd)
 	}()
+}
+
+func (l *Launcher) forget(id string, cmd *exec.Cmd) {
+	l.mu.Lock()
+	if cur, ok := l.running[id]; ok && cur == cmd {
+		delete(l.running, id)
+	}
+	l.mu.Unlock()
 }
 
 func (l *Launcher) RunningIDs() []string {

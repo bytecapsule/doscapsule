@@ -1,7 +1,11 @@
-package main
+package app
 
 // Persisted user state (state.json): selected games root, favorites and
 // last-played timestamps.
+//
+// The CLI and the web server can run as separate processes and both write this
+// file. To keep them from overwriting each other, every mutation re-reads the
+// file first (read-modify-write) and saves atomically (temp file + rename).
 
 import (
 	"encoding/json"
@@ -106,15 +110,19 @@ func LoadStore() *Store {
 	return &Store{st: st}
 }
 
+// Get returns a snapshot. It re-reads state.json first so a change made by
+// another process (e.g. `doscapsule scan` while the UI is open) is visible.
 func (s *Store) Get() PersistedState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.refreshLocked()
 	return s.st.clone()
 }
 
 func (s *Store) SetGamesRoot(root string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.refreshLocked()
 	r := root
 	s.st.GamesRoot = &r
 	s.saveLocked()
@@ -123,6 +131,7 @@ func (s *Store) SetGamesRoot(root string) {
 func (s *Store) ToggleFavorite(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.refreshLocked()
 	for i, f := range s.st.Favorites {
 		if f == id {
 			s.st.Favorites = append(s.st.Favorites[:i], s.st.Favorites[i+1:]...)
@@ -138,6 +147,7 @@ func (s *Store) ToggleFavorite(id string) bool {
 func (s *Store) StampPlayed(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.refreshLocked()
 	if s.st.LastPlayed == nil {
 		s.st.LastPlayed = map[string]int64{}
 	}
@@ -145,14 +155,60 @@ func (s *Store) StampPlayed(id string) {
 	s.saveLocked()
 }
 
+// refreshLocked replaces the in-memory state with the file on disk, if it can
+// be read and parsed. A missing or corrupt file leaves the current state alone.
+func (s *Store) refreshLocked() {
+	dir, err := stateDir()
+	if err != nil {
+		return
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "state.json"))
+	if err != nil {
+		return
+	}
+	var st PersistedState
+	if json.Unmarshal(b, &st) != nil {
+		return
+	}
+	if st.LastPlayed == nil {
+		st.LastPlayed = map[string]int64{}
+	}
+	s.st = st
+}
+
 func (s *Store) saveLocked() {
 	dir, err := stateDir()
 	if err != nil {
 		return
 	}
-	_ = os.MkdirAll(dir, 0o755)
-	b, _ := json.MarshalIndent(s.st, "", "  ")
-	_ = os.WriteFile(filepath.Join(dir, "state.json"), b, 0o644)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return
+	}
+	b, err := json.MarshalIndent(s.st, "", "  ")
+	if err != nil {
+		return
+	}
+	// Atomic replace: a reader (the other process) never sees a half-written
+	// state.json. A unique temp name means two writers cannot clobber each
+	// other's partial file; the rename is the commit point.
+	f, err := os.CreateTemp(dir, "state-*.tmp")
+	if err != nil {
+		return
+	}
+	name := f.Name()
+	if _, err := f.Write(b); err != nil {
+		_ = f.Close()
+		_ = os.Remove(name)
+		return
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(name)
+		return
+	}
+	_ = os.Chmod(name, 0o644)
+	if err := os.Rename(name, filepath.Join(dir, "state.json")); err != nil {
+		_ = os.Remove(name)
+	}
 }
 
 func (s PersistedState) clone() PersistedState {

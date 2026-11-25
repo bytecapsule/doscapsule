@@ -9,7 +9,7 @@ games, read [game-integration.md](game-integration.md) instead.
 
 | Layer | Tech |
 |---|---|
-| Backend | Go 1.27+, a single `package main` |
+| Backend | Go 1.27+, layered packages: `internal/app` (core), `internal/httpapi`, `internal/cli` |
 | Frontend | SolidJS + TypeScript + Vite |
 | Delivery | The frontend build is embedded into the same binary via `//go:embed` |
 | Package manager | pnpm |
@@ -24,14 +24,14 @@ No database, no network calls, no cgo. At runtime it only listens on
 
 ```
 doscapsule/
-├── cmd/doscapsule/        Go sources + go:embed resources
-│   ├── main.go            embed, HTTP server, /api/* routes, browser launch
-│   ├── launcher.go        DOSBox resolution, defaults.conf, exec
-│   ├── catalog.go         scanning, LocalGame, manifest I/O
-│   ├── state.go           state.json, portable vs system config dir
-│   ├── util.go            resolveGameDir (path traversal guard) etc.
+├── cmd/doscapsule/        composition root
+│   ├── main.go            go:embed + wiring only
 │   ├── dist/              frontend build output (gitignored, embed source)
 │   └── resources/         fallback-cover.jpg
+├── internal/
+│   ├── app/               core: catalog, launcher, state, path guards
+│   ├── httpapi/           /api/*, embedded UI, Host/CSRF wrapper
+│   └── cli/               scan / list / search / run / serve
 ├── frontend/              SolidJS + Vite
 ├── Formula/               Homebrew formula
 ├── bucket/                Scoop manifest
@@ -42,9 +42,12 @@ doscapsule/
 └── Makefile
 ```
 
-Standard Go `cmd/` layout. The sources stay a **single package** (~1,200 lines):
-splitting into several internal packages at this size buys little and adds
-export noise and import cycles.
+`cmd/doscapsule` is only the composition root. The core is transport
+independent: `internal/app` owns scanning, launching, state and filtering, with
+no HTTP or CLI imports. `internal/httpapi` and `internal/cli` are thin
+transports over the same `App` methods, so adding an entry point (a second UI,
+an MCP adapter, a batch script) does not mean re-implementing `scan` or
+`launch`.
 
 ---
 
@@ -124,7 +127,43 @@ The frontend calls these through the HTTP client in `frontend/src/api/client.ts`
 
 ---
 
-## 5. Build
+## 5. Entry points
+
+One core (`internal/app`), two transports:
+
+| Entry point | Package | Lifetime |
+|---|---|---|
+| Browser UI | `internal/httpapi` + embedded SolidJS | long-running server |
+| CLI | `internal/cli` | one process per command |
+
+### CLI
+
+```bash
+doscapsule                          # serve + open the browser (unchanged)
+doscapsule serve [--port N] [--no-open]
+doscapsule scan <games-dir>
+doscapsule list [--root DIR] [--json] [--sort title|year|genre|recent] [--genre G] [--favorites]
+doscapsule search <query> [--root DIR] [--json]
+doscapsule run <game-id> [--root DIR]
+doscapsule version
+```
+
+- `scan` is the only command that changes the remembered games folder.
+- `list` / `search` are read-only: they scan `--root` or the remembered folder
+  and print a table; `--json` prints the same `LocalGame` objects as the API.
+- `run` is foreground: the CLI is DOSBox's parent, blocks until the game exits,
+  and Ctrl+C stops it (exit 130). Closing the terminal takes the game down too.
+  There is no daemon and no persisted running state.
+- Output contract: stdout is data, stderr is diagnostics, exit codes are 0
+  (ok), 1 (runtime error), 2 (usage), 130 (interrupted).
+- Legacy `-port`, `-open-browser` and `-version` flags still work.
+
+`run` does not stop games launched by the UI, and the UI does not show games
+launched by `run`: the foreground process owns that lifetime.
+
+---
+
+## 6. Build
 
 The Makefile is the single entry point and works on every platform:
 
@@ -137,7 +176,7 @@ make test      # tests
 make run       # build and run
 make zip-arm   # package for arm64 (-> out/*.zip)
 make zip-x64   # package for x64 (-> out/*.zip)
-make clean     # remove build/out + dist
+make clean     # remove out/ + dist
 make help      # list targets
 ```
 
@@ -153,7 +192,7 @@ Requires Go 1.27+, Node.js 22+, pnpm 12+.
 
 ---
 
-## 6. Release
+## 7. Release
 
 ### Pipeline
 `.github/workflows/build.yml` is the only workflow and is **dispatched
@@ -236,12 +275,12 @@ in automatically.
 
 ---
 
-## 7. Security and contributions
+## 8. Security and contributions
 
 ### Runtime security
 The UI is served from `127.0.0.1`, but that only limits the network entry — a
 malicious web page can still reach the loopback address. So every request is
-wrapped in two layers (see `main()`):
+wrapped in two layers (see `httpapi.Serve`):
 
 - **Host check**: only the exact listener address (e.g. `127.0.0.1:8420`, or the
   random port after a fallback) is accepted as `Host`; anything else returns

@@ -1,7 +1,7 @@
-package main
+package app
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +26,7 @@ func resolveGameDir(root, id string) (string, error) {
 	rootAbs, _ := filepath.Abs(root)
 	dirAbs, _ := filepath.Abs(dir)
 	if !strings.HasPrefix(dirAbs, rootAbs+string(os.PathSeparator)) || !isDir(dirAbs) {
-		return "", errors.New("game directory not found: " + id)
+		return "", fmt.Errorf("%w: %s", ErrGameNotFound, id)
 	}
 	return dirAbs, nil
 }

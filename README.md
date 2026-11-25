@@ -52,6 +52,22 @@ Then click **Scan game folder** in the top bar and choose your DOS games
 directory. The scan result, favourites and play history are saved, so next
 launch picks up where you left off.
 
+## Command line
+
+The same binary has a small CLI, useful for scripts and for launching a game
+without the browser:
+
+```bash
+doscapsule scan ~/dos-games      # remember and index a folder
+doscapsule list                  # table of games
+doscapsule list --json           # the same data for scripts
+doscapsule search duke           # filter by title/developer/genre
+doscapsule run DUKE3D            # play in the foreground; Ctrl+C stops it
+```
+
+`run` blocks until the game exits, so the terminal stays attached to the
+emulator. `list`/`search` never change the remembered folder; only `scan` does.
+
 ## What each game folder needs
 
 The launcher never touches your game files, but each game folder needs a couple

@@ -65,7 +65,7 @@ zip-x64: dist build-x64 ## package macOS amd64
 
 zip-all: zip-arm zip-x64 ## package both macOS arches
 
-clean: ## remove build artifacts (build/ + embedded frontend dist)
+clean: ## remove build artifacts (out/ + embedded frontend dist)
 	rm -rf $(OUT) $(DIST)
 
 # ── package-manager manifests ────────────────────────────────────────────────

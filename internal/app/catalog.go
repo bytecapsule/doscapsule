@@ -1,4 +1,4 @@
-package main
+package app
 
 // Catalog: recursive scan of a games root + @launcher.json manifests.
 // Relative-path ids, hidden dirs skipped, symlinks never followed, manifest
@@ -81,8 +81,8 @@ func manifestFile(dir string) string {
 
 const confName = "@dosbox.conf"
 
-// The virtual path the frontend asks /media for when a game ships no cover.
-const fallbackCoverPath = "/builtin/fallback-cover.jpg"
+// FallbackCoverPath is the virtual path /media serves when a game ships no cover.
+const FallbackCoverPath = "/builtin/fallback-cover.jpg"
 
 func fileExists(p string) bool {
 	return p != "" && filepath.Base(p) != "" && func() bool { st, err := os.Stat(p); return err == nil && st.Mode().IsRegular() }()
@@ -239,7 +239,7 @@ func gameFromDir(root, dir string) *LocalGame {
 	found := coverPathOf(dir, m)
 	hasThumb := found != nil
 	if found == nil {
-		fb := fallbackCoverPath // virtual path served from the embedded bytes
+		fb := FallbackCoverPath // virtual path served from the embedded bytes
 		found = &fb
 		hasThumb = true
 	}

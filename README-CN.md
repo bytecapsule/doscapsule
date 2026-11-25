@@ -50,6 +50,20 @@ doscapsule              # 自动开浏览器
 然后点顶栏的 **扫描游戏文件夹**，选中你的 DOS 游戏目录即可。
 扫描结果、收藏和游玩记录会自动保存，下次打开直接就在。
 
+## 命令行
+
+同一个程序也带一个小 CLI，适合脚本，也适合不打开浏览器直接启动游戏：
+
+```bash
+doscapsule scan ~/dos-games      # 记住并索引一个目录
+doscapsule list                  # 游戏列表
+doscapsule list --json           # 给脚本用的 JSON
+doscapsule search duke           # 按标题/开发商/类型过滤
+doscapsule run DUKE3D            # 前台运行，Ctrl+C 停止
+```
+
+`run` 会阻塞到游戏退出，终端始终连着模拟器。`list`/`search` 不会改变记住的目录，只有 `scan` 会。
+
 ## 游戏目录要准备什么
 
 启动器不会动你的游戏文件，但每个游戏目录里需要几个**说明文件**，
